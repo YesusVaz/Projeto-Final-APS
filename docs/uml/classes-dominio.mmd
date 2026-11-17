@@ -1,0 +1,142 @@
+classDiagram
+direction LR
+
+class Usuario {
+  -Long id
+  -String login
+  -String senhaHash
+  -Perfil perfil
+  -boolean ativo
+  +podeExecutar(Acao) boolean
+}
+class Perfil {
+  <<enumeration>>
+  GESTOR
+  TECNICO
+  FUNCIONARIO
+  +permite(Acao) boolean
+}
+
+class Lote {
+  -Long id
+  -String codigo
+  -Especie especie
+  -Quantidade quantidadeInicial
+  -Quantidade saldo
+  -StatusLote status
+  +aplicar(MovimentoLote) void
+  +encerrar(MotivoEncerramento, CodigoLancamento, LocalDateTime) Optional~MovimentoLote~
+  +consistenteCom(List~MovimentoLote~) boolean
+  +estaAtivo() boolean
+}
+class MovimentoLote {
+  -Long id
+  -TipoMovimentoLote tipo
+  -Quantidade quantidade
+  -CodigoLancamento codigo
+  -LocalDateTime dataHora
+  -String observacao
+  +efeitoNoSaldo() int
+}
+class TipoMovimentoLote {
+  <<enumeration>>
+  ENTRADA_INICIAL
+  MORTALIDADE
+  BAIXA_VENDA
+  BAIXA_DESCARTE
+  BAIXA_TRANSFERENCIA
+  +sinal() int
+}
+class StatusLote {
+  <<enumeration>>
+  ATIVO
+  ENCERRADO
+}
+class MotivoEncerramento {
+  <<enumeration>>
+  VENDA
+  DESCARTE
+  TRANSFERENCIA
+}
+
+class Insumo {
+  -Long id
+  -String nome
+  -CategoriaInsumo categoria
+  -Quantidade nivelMinimo
+  -Quantidade saldo
+  -boolean ativo
+  +aplicar(MovimentoEstoque) void
+  +abaixoDoMinimo() boolean
+}
+class MovimentoEstoque {
+  -Long id
+  -TipoMovimentoEstoque tipo
+  -Quantidade quantidade
+  -CodigoLancamento codigo
+  -OrigemMovimento origem
+}
+class RegistroAlimentacao {
+  -Long id
+  -Quantidade quantidadeKg
+  -LocalDate data
+  -CodigoLancamento codigo
+}
+
+class Acao {
+  <<enumeration>>
+  CADASTRAR_LOTE
+  ENCERRAR_LOTE
+  REGISTRAR_MORTALIDADE
+  MOVIMENTAR_ESTOQUE
+  ...
+}
+class PoliticaAlertaMortalidade {
+  <<interface>>
+  +avaliar(ResumoMortalidade) NivelAlerta
+}
+class ResumoMortalidade {
+  <<record>>
+  -int quantidadeInicial
+  -int mortesNoDia
+  -int mortesAcumuladas
+}
+class AlertaMortalidadeDiaria {
+  -double limiteAtencao
+  -double limiteCritico
+}
+class AlertaMortalidadeAcumulada {
+  -double limiteAtencao
+  -double limiteCritico
+}
+class NivelAlerta {
+  <<enumeration>>
+  NORMAL
+  ATENCAO
+  CRITICO
+}
+
+Usuario --> Perfil
+Perfil ..> Acao
+Lote "1" --> "1..*" MovimentoLote : historico
+Lote --> StatusLote
+Lote ..> MotivoEncerramento
+MovimentoLote --> TipoMovimentoLote
+Insumo "1" --> "0..*" MovimentoEstoque : extrato
+RegistroAlimentacao "0..*" --> "1" Lote
+RegistroAlimentacao "0..*" --> "1" Insumo
+MovimentoEstoque "0..*" --> "0..1" Lote : consumo
+AlertaMortalidadeDiaria ..|> PoliticaAlertaMortalidade
+AlertaMortalidadeAcumulada ..|> PoliticaAlertaMortalidade
+class CriadorPoliticaAlerta {
+  <<abstract>>
+  +configurar(double, double) PoliticaAlertaMortalidade
+  #criarPolitica(double, double) PoliticaAlertaMortalidade
+}
+class CriadorAlertaDiario
+class CriadorAlertaAcumulado
+PoliticaAlertaMortalidade ..> NivelAlerta
+PoliticaAlertaMortalidade ..> ResumoMortalidade
+CriadorAlertaDiario --|> CriadorPoliticaAlerta
+CriadorAlertaAcumulado --|> CriadorPoliticaAlerta
+CriadorPoliticaAlerta ..> PoliticaAlertaMortalidade : cria

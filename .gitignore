@@ -1,0 +1,18 @@
+# Java / Maven
+target/
+*.class
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Bancos locais (os dados de demonstração entram na entrega final, de forma explícita)
+*.db
+*.sqlite
+
+# IDEs e sistema
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

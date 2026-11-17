@@ -1,0 +1,33 @@
+flowchart LR
+  FE["<b>frontend/</b><br/>React + Vite<br/>TypeScript"]
+
+  subgraph BE["backend/ — Java 17+ · Maven"]
+    direction LR
+    MN["<b>Main</b><br/>composition root"]
+    CT["<b>controller</b><br/>API REST · DTOs<br/>403 / 409 / 422"]
+    SV["<b>service</b><br/>casos de uso<br/>autorização por perfil<br/>transações"]
+    DM["<b>model + policy</b><br/>entidades · invariantes<br/>Strategy de alerta"]
+    EV["<b>evento</b><br/>Observer<br/>auditoria · alertas"]
+    RP["<b>repository</b><br/>contratos<br/>(interfaces)"]
+    SQ["<b>repository.sqlite</b><br/>JDBC · transação<br/>UNIQUE"]
+  end
+
+  DB[("SQLite<br/>arquivo local")]
+
+  FE -->|"HTTP / JSON"| CT
+  MN -.->|"injeta por<br/>construtor"| CT
+  CT --> SV
+  SV --> DM
+  SV --> EV
+  SV --> RP
+  SQ -.->|implementa| RP
+  SQ --> DB
+
+  classDef ext fill:#f3f4f6,stroke:#6b7280,color:#111827;
+  classDef core fill:#ecfdf5,stroke:#059669,color:#064e3b;
+  classDef infra fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
+  classDef app fill:#fefce8,stroke:#ca8a04,color:#713f12;
+  class FE,DB ext;
+  class DM,EV core;
+  class SQ,MN infra;
+  class CT,SV,RP app;
