@@ -1,0 +1,89 @@
+classDiagram
+direction LR
+
+class LoteController
+class EstoqueController
+class AlimentacaoController
+
+class LoteService {
+  +cadastrar(Usuario, NovoLote) Lote
+  +registrarMortalidade(Usuario, ComandoMortalidade) MovimentoLote
+  +encerrar(Usuario, Long, MotivoEncerramento) Lote
+}
+class EstoqueService {
+  +cadastrarInsumo(Usuario, NovoInsumo) Insumo
+  +movimentar(Usuario, ComandoMovimento) MovimentoEstoque
+}
+class AlimentacaoService {
+  +registrar(Usuario, ComandoAlimentacao) RegistroAlimentacao
+}
+class AutorizacaoService {
+  +exigir(Usuario, Acao) void
+}
+
+class Transacao {
+  <<interface>>
+  +executar(Supplier~T~) T
+}
+class LoteRepository {
+  <<interface>>
+}
+class MovimentoLoteRepository {
+  <<interface>>
+  +existePorCodigo(CodigoLancamento) boolean
+}
+class InsumoRepository {
+  <<interface>>
+}
+class MovimentoEstoqueRepository {
+  <<interface>>
+  +existePorCodigo(CodigoLancamento) boolean
+}
+class SqliteRepositories {
+  implementacoes JDBC
+}
+
+class BarramentoEventos {
+  +assinar(OuvinteEvento) void
+  +publicar(EventoDominio) void
+}
+class OuvinteEvento {
+  <<interface>>
+  +aoOcorrer(EventoDominio) void
+}
+class AuditoriaListener
+class AlertaListener
+class PoliticaAlertaMortalidade {
+  <<interface>>
+}
+
+LoteController --> LoteService
+EstoqueController --> EstoqueService
+AlimentacaoController --> AlimentacaoService
+
+LoteService --> AutorizacaoService
+EstoqueService --> AutorizacaoService
+AlimentacaoService --> AutorizacaoService
+
+LoteService --> LoteRepository
+LoteService --> MovimentoLoteRepository
+LoteService --> Transacao
+LoteService --> BarramentoEventos
+LoteService --> PoliticaAlertaMortalidade
+EstoqueService --> InsumoRepository
+EstoqueService --> MovimentoEstoqueRepository
+EstoqueService --> Transacao
+EstoqueService --> BarramentoEventos
+AlimentacaoService --> LoteService
+AlimentacaoService --> EstoqueService
+AlimentacaoService --> Transacao
+
+SqliteRepositories ..|> LoteRepository
+SqliteRepositories ..|> MovimentoLoteRepository
+SqliteRepositories ..|> InsumoRepository
+SqliteRepositories ..|> MovimentoEstoqueRepository
+SqliteRepositories ..|> Transacao
+
+BarramentoEventos o-- OuvinteEvento
+AuditoriaListener ..|> OuvinteEvento
+AlertaListener ..|> OuvinteEvento
