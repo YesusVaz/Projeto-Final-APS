@@ -11,6 +11,10 @@ import br.ufpb.aps.granja.model.MovimentoLote;
 import br.ufpb.aps.granja.model.Quantidade;
 import br.ufpb.aps.granja.model.TipoMovimentoLote;
 import br.ufpb.aps.granja.model.Usuario;
+<<<<<<< HEAD
+=======
+import br.ufpb.aps.granja.model.excecao.NaoEncontradoException;
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import br.ufpb.aps.granja.policy.AlertaMortalidade;
 import br.ufpb.aps.granja.policy.NivelAlerta;
 import br.ufpb.aps.granja.policy.ResumoMortalidade;
@@ -140,6 +144,11 @@ public final class LoteService {
     }
 
     private Lote carregar(long loteId) {
+<<<<<<< HEAD
         return Buscas.lote(lotes, loteId);
+=======
+        return lotes.buscarPorId(loteId)
+                .orElseThrow(() -> new NaoEncontradoException("Lote " + loteId + " não encontrado."));
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 }

@@ -1,5 +1,6 @@
 package br.ufpb.aps.granja.service;
 
+<<<<<<< HEAD
 import br.ufpb.aps.granja.model.Acao;
 import br.ufpb.aps.granja.model.Perfil;
 import br.ufpb.aps.granja.model.Usuario;
@@ -24,10 +25,20 @@ import java.util.regex.Pattern;
  * Login, sessao e cadastro de usuario. RN02 (inativo nao entra), RNF09 (senha so como hash bcrypt)
  * e RN25 (so o gestor escolhe perfil e status). A sessao e um token aleatorio guardado em memoria, com validade.
  */
+=======
+import br.ufpb.aps.granja.model.Perfil;
+import br.ufpb.aps.granja.model.Usuario;
+import br.ufpb.aps.granja.model.excecao.AutenticacaoException;
+import br.ufpb.aps.granja.repository.UsuarioRepository;
+import org.mindrot.jbcrypt.BCrypt;
+
+/** RN02 (inativo nao entra) e RNF09 (senha guardada como hash bcrypt). */
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 public final class AutenticacaoService {
 
     /** Custo do bcrypt. A RNF09 pede 10 ou mais. */
     private static final int CUSTO_BCRYPT = 10;
+<<<<<<< HEAD
     private static final int MIN_CARACTERES_SENHA = 6;
     /** O bcrypt so le os primeiros 72 bytes. Passar disso cortaria a senha sem avisar. */
     private static final int MAX_BYTES_SENHA = 72;
@@ -61,6 +72,15 @@ public final class AutenticacaoService {
     }
 
     /** Confere login e senha. Login inexistente, senha errada e usuario inativo dao a mesma resposta. */
+=======
+
+    private final UsuarioRepository usuarios;
+
+    public AutenticacaoService(UsuarioRepository usuarios) {
+        this.usuarios = usuarios;
+    }
+
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     public Usuario autenticar(String login, String senha) {
         Usuario usuario = usuarios.buscarPorLogin(login).orElseThrow(AutenticacaoException::new);
         if (!usuario.ativo() || senha == null || !BCrypt.checkpw(senha, usuario.senhaHash())) {
@@ -69,6 +89,7 @@ public final class AutenticacaoService {
         return usuario;
     }
 
+<<<<<<< HEAD
     /** Login: confere a credencial e abre uma sessao com token. */
     public SessaoAberta entrar(String login, String senha) {
         Usuario usuario = autenticar(login, senha);
@@ -185,5 +206,16 @@ public final class AutenticacaoService {
         if (senha.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES_SENHA) {
             throw new IllegalArgumentException("A senha é longa demais: o limite é de 72 bytes.");
         }
+=======
+    /** Cria usuario ja com a senha em hash. Usado na subida do sistema. */
+    public Usuario cadastrar(String login, String senha, Perfil perfil) {
+        if (login == null || login.isBlank()) {
+            throw new IllegalArgumentException("O login é obrigatório.");
+        }
+        if (senha == null || senha.length() < 6) {
+            throw new IllegalArgumentException("A senha precisa ter pelo menos 6 caracteres.");
+        }
+        return usuarios.inserir(login.trim(), BCrypt.hashpw(senha, BCrypt.gensalt(CUSTO_BCRYPT)), perfil);
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 }

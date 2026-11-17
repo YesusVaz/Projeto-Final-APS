@@ -36,7 +36,11 @@ public final class Banco implements UnidadeDeTrabalho, AutoCloseable {
                     + "quantidade_kg INTEGER NOT NULL CHECK (quantidade_kg > 0), data TEXT NOT NULL, "
                     + "codigo TEXT NOT NULL REFERENCES lancamento(codigo))",
             "CREATE TABLE IF NOT EXISTS usuario (id INTEGER PRIMARY KEY AUTOINCREMENT, login TEXT NOT NULL UNIQUE, "
+<<<<<<< HEAD
                     + "nome TEXT NOT NULL, email TEXT NOT NULL UNIQUE, senha_hash TEXT NOT NULL, perfil TEXT NOT NULL, ativo INTEGER NOT NULL)",
+=======
+                    + "senha_hash TEXT NOT NULL, perfil TEXT NOT NULL, ativo INTEGER NOT NULL)",
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
             "CREATE TABLE IF NOT EXISTS auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria TEXT NOT NULL, "
                     + "detalhe TEXT NOT NULL, data_hora TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS alerta_mortalidade (id INTEGER PRIMARY KEY AUTOINCREMENT, "

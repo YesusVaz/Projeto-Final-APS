@@ -12,6 +12,10 @@ import br.ufpb.aps.granja.model.RegistroAlimentacao;
 import br.ufpb.aps.granja.model.TipoMovimentoEstoque;
 import br.ufpb.aps.granja.model.Usuario;
 import br.ufpb.aps.granja.model.excecao.LoteEncerradoException;
+<<<<<<< HEAD
+=======
+import br.ufpb.aps.granja.model.excecao.NaoEncontradoException;
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import br.ufpb.aps.granja.model.excecao.RegraDeNegocioException;
 import br.ufpb.aps.granja.repository.AlimentacaoRepository;
 import br.ufpb.aps.granja.repository.InsumoRepository;
@@ -50,12 +54,22 @@ public final class AlimentacaoService {
         return uow.executar(() -> {
             lancamentos.registrar(codigo, agora);
 
+<<<<<<< HEAD
             Lote lote = Buscas.lote(lotes, loteId);
+=======
+            Lote lote = lotes.buscarPorId(loteId)
+                    .orElseThrow(() -> new NaoEncontradoException("Lote " + loteId + " não encontrado."));
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
             if (!lote.estaAtivo()) {
                 throw new LoteEncerradoException(lote.codigo());
             }
 
+<<<<<<< HEAD
             Insumo insumo = Buscas.insumo(insumos, insumoId);
+=======
+            Insumo insumo = insumos.buscarPorId(insumoId)
+                    .orElseThrow(() -> new NaoEncontradoException("Insumo " + insumoId + " não encontrado."));
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
             if (insumo.categoria() != CategoriaInsumo.RACAO) {
                 throw new RegraDeNegocioException("Só insumo da categoria RACAO pode ser usado na alimentação (RN10).");
             }

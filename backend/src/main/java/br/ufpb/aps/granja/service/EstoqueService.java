@@ -9,6 +9,10 @@ import br.ufpb.aps.granja.model.OrigemMovimento;
 import br.ufpb.aps.granja.model.Quantidade;
 import br.ufpb.aps.granja.model.TipoMovimentoEstoque;
 import br.ufpb.aps.granja.model.Usuario;
+<<<<<<< HEAD
+=======
+import br.ufpb.aps.granja.model.excecao.NaoEncontradoException;
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import br.ufpb.aps.granja.repository.InsumoRepository;
 import br.ufpb.aps.granja.repository.LancamentoRepository;
 import br.ufpb.aps.granja.repository.UnidadeDeTrabalho;
@@ -73,6 +77,11 @@ public final class EstoqueService {
     }
 
     private Insumo carregar(long insumoId) {
+<<<<<<< HEAD
         return Buscas.insumo(insumos, insumoId);
+=======
+        return insumos.buscarPorId(insumoId)
+                .orElseThrow(() -> new NaoEncontradoException("Insumo " + insumoId + " não encontrado."));
+>>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 }
