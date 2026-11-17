@@ -8,4 +8,9 @@ public class AutenticacaoException extends RegraDeNegocioException {
     public AutenticacaoException() {
         super("Login recusado: usuário inativo ou credenciais inválidas.");
     }
+
+    /** Pra subclasse com mensagem propria (conta bloqueada, RN03). */
+    protected AutenticacaoException(String mensagem) {
+        super(mensagem);
+    }
 }

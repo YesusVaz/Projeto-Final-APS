@@ -14,16 +14,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-<<<<<<< HEAD
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-=======
-import java.util.Base64;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApiGranjaTest {
@@ -38,8 +32,7 @@ class ApiGranjaTest {
     @BeforeEach
     void subir() throws IOException {
         c = new Cenario();
-        ApiGranja api = new ApiGranja(c.app.autenticacao(), c.app.lotes(), c.app.estoque(),
-                c.app.alimentacao(), c.app.configuracao());
+        ApiGranja api = new ApiGranja(c.app);
         servidor = api.iniciar(0);
         base = "http://127.0.0.1:" + servidor.getAddress().getPort() + "/api";
         http = HttpClient.newHttpClient();
@@ -173,7 +166,6 @@ class ApiGranjaTest {
         assertEquals("ACUMULADO", atual.get("criterio").asText());
     }
 
-<<<<<<< HEAD
     // sessao: login, token e logout
 
     @Test
@@ -322,15 +314,12 @@ class ApiGranjaTest {
         assertEquals(422, enviarComToken("POST", "/usuarios", token, corpo).statusCode());
     }
 
-=======
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     private HttpResponse<String> cadastrarLote(String codigoLancamento, int quantidadeInicial) throws Exception {
         return enviar("POST", "/lotes", "tecnico", "senha-tecnico",
                 "{\"codigoLancamento\":\"" + codigoLancamento + "\",\"especie\":\"FRANGO_CORTE\",\"quantidadeInicial\":"
                         + quantidadeInicial + "}");
     }
 
-<<<<<<< HEAD
     private HttpResponse<String> login(String usuario, String senha) throws Exception {
         return enviarComToken("POST", "/login", null, JSON.writeValueAsString(Map.of("login", usuario, "senha", senha)));
     }
@@ -368,16 +357,6 @@ class ApiGranjaTest {
                 .header("Content-Type", "application/json");
         if (token != null) {
             requisicao.header("Authorization", "Bearer " + token);
-=======
-    private HttpResponse<String> enviar(String metodo, String caminho, String usuario, String senha, String corpo)
-            throws IOException, InterruptedException {
-        HttpRequest.Builder requisicao = HttpRequest.newBuilder(URI.create(base + caminho))
-                .header("Content-Type", "application/json");
-        if (usuario != null) {
-            String credenciais = usuario + ":" + senha;
-            requisicao.header("Authorization",
-                    "Basic " + Base64.getEncoder().encodeToString(credenciais.getBytes(StandardCharsets.UTF_8)));
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
         }
         HttpRequest.BodyPublisher publicador = corpo == null
                 ? HttpRequest.BodyPublishers.noBody()

@@ -5,8 +5,10 @@ import br.ufpb.aps.granja.api.dto.UsuarioDto;
 import br.ufpb.aps.granja.model.Perfil;
 import br.ufpb.aps.granja.model.Usuario;
 import br.ufpb.aps.granja.service.AutenticacaoService;
+import br.ufpb.aps.granja.service.UsuarioService;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,13 +17,18 @@ import static br.ufpb.aps.granja.api.CorpoJson.enumeracao;
 import static br.ufpb.aps.granja.api.CorpoJson.senha;
 import static br.ufpb.aps.granja.api.CorpoJson.texto;
 
-/** Login, logout e cadastro de usuarios. Login e cadastro publico sao as unicas rotas sem token. */
+/**
+ * Login, logout e usuarios. Login e cadastro publico sao as unicas rotas sem token.
+ * Nao tem rota que troque o login de ninguem (RN01).
+ */
 final class AutenticacaoController implements Controller {
 
     private final AutenticacaoService autenticacao;
+    private final UsuarioService usuarios;
 
-    AutenticacaoController(AutenticacaoService autenticacao) {
+    AutenticacaoController(AutenticacaoService autenticacao, UsuarioService usuarios) {
         this.autenticacao = autenticacao;
+        this.usuarios = usuarios;
     }
 
     @Override
@@ -30,7 +37,9 @@ final class AutenticacaoController implements Controller {
                 Rota.postPublica("/api/login", this::login),
                 Rota.postPublica("/api/cadastro", this::cadastroPublico),
                 Rota.post("/api/logout", this::logout),
-                Rota.post("/api/usuarios", this::cadastrarUsuario));
+                Rota.post("/api/usuarios", this::cadastrarUsuario),
+                Rota.get("/api/usuarios", this::listarUsuarios),
+                Rota.put("/api/usuarios/(\\d+)/status", this::alterarStatus));
     }
 
     private Resposta login(Requisicao r) {
@@ -58,5 +67,22 @@ final class AutenticacaoController implements Controller {
                 texto(c, "nome"), senha(c), enumeracao(Perfil.class, c, "perfil"),
                 booleanoOpcional(c, "ativo", true));
         return Resposta.criado(UsuarioDto.de(novo));
+    }
+
+    private Resposta listarUsuarios(Requisicao r) {
+        return Resposta.ok(usuarios.listar(r.usuario()).stream().map(UsuarioDto::de).toList());
+    }
+
+    /** So o campo ativo. Login, se vier no corpo, e ignorado. */
+    private Resposta alterarStatus(Requisicao r) {
+        boolean ativo = booleanoObrigatorio(r.corpo(), "ativo");
+        return Resposta.ok(UsuarioDto.de(usuarios.alterarStatus(r.usuario(), r.id(), ativo, LocalDateTime.now())));
+    }
+
+    private static boolean booleanoObrigatorio(JsonNode c, String campo) {
+        if (c == null || !c.hasNonNull(campo)) {
+            throw new IllegalArgumentException("Campo obrigatório ausente: " + campo + ".");
+        }
+        return booleanoOpcional(c, campo, false);
     }
 }

@@ -10,6 +10,6 @@ public interface AuditoriaRepository {
 
     List<Entrada> listar();
 
-    record Entrada(String categoria, String detalhe, LocalDateTime dataHora) {
+    record Entrada(long id, String categoria, String detalhe, LocalDateTime dataHora) {
     }
 }

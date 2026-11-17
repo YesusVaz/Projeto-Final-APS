@@ -1,10 +1,12 @@
 package br.ufpb.aps.granja.service;
 
-<<<<<<< HEAD
+import br.ufpb.aps.granja.evento.BarramentoEventos;
+import br.ufpb.aps.granja.evento.OperacaoRealizada;
 import br.ufpb.aps.granja.model.Acao;
 import br.ufpb.aps.granja.model.Perfil;
 import br.ufpb.aps.granja.model.Usuario;
 import br.ufpb.aps.granja.model.excecao.AutenticacaoException;
+import br.ufpb.aps.granja.model.excecao.ContaBloqueadaException;
 import br.ufpb.aps.granja.model.excecao.EmailJaExisteException;
 import br.ufpb.aps.granja.model.excecao.LoginJaExisteException;
 import br.ufpb.aps.granja.repository.UsuarioRepository;
@@ -15,6 +17,8 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
@@ -22,23 +26,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
- * Login, sessao e cadastro de usuario. RN02 (inativo nao entra), RNF09 (senha so como hash bcrypt)
- * e RN25 (so o gestor escolhe perfil e status). A sessao e um token aleatorio guardado em memoria, com validade.
+ * Login, sessao e cadastro de usuario. RN02 (inativo nao entra), RN03 (5 erros travam 15 min),
+ * RNF09 (senha so como hash bcrypt) e RN25 (so o gestor escolhe perfil e status).
+ * A sessao e um token aleatorio guardado em memoria, com validade. As tentativas erradas tambem ficam
+ * em memoria: reiniciar o servidor zera as duas coisas.
  */
-=======
-import br.ufpb.aps.granja.model.Perfil;
-import br.ufpb.aps.granja.model.Usuario;
-import br.ufpb.aps.granja.model.excecao.AutenticacaoException;
-import br.ufpb.aps.granja.repository.UsuarioRepository;
-import org.mindrot.jbcrypt.BCrypt;
-
-/** RN02 (inativo nao entra) e RNF09 (senha guardada como hash bcrypt). */
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 public final class AutenticacaoService {
 
     /** Custo do bcrypt. A RNF09 pede 10 ou mais. */
     private static final int CUSTO_BCRYPT = 10;
-<<<<<<< HEAD
     private static final int MIN_CARACTERES_SENHA = 6;
     /** O bcrypt so le os primeiros 72 bytes. Passar disso cortaria a senha sem avisar. */
     private static final int MAX_BYTES_SENHA = 72;
@@ -47,6 +43,9 @@ public final class AutenticacaoService {
     private static final Pattern LOGIN_VALIDO = Pattern.compile("[A-Za-z0-9._-]{3,30}");
     private static final Pattern EMAIL_VALIDO = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
     private static final Duration VALIDADE_SESSAO = Duration.ofHours(8);
+    /** RN03. */
+    private static final int MAX_TENTATIVAS = 5;
+    private static final Duration TEMPO_BLOQUEIO = Duration.ofMinutes(15);
     /** Quem se cadastra sozinho entra como funcionario, que e o perfil de menos poder. */
     private static final Perfil PERFIL_PUBLICO = Perfil.FUNCIONARIO;
 
@@ -57,39 +56,53 @@ public final class AutenticacaoService {
     private record Sessao(String login, Instant expiraEm) {
     }
 
+    /** Erros seguidos de um login e, se travou, ate quando. */
+    private record Tentativas(int erros, Instant bloqueadoAte) {
+    }
+
     private final UsuarioRepository usuarios;
     private final Clock relogio;
+    private final BarramentoEventos eventos;
     private final Map<String, Sessao> sessoes = new ConcurrentHashMap<>();
+    private final Map<String, Tentativas> tentativas = new ConcurrentHashMap<>();
     private final SecureRandom aleatorio = new SecureRandom();
 
     public AutenticacaoService(UsuarioRepository usuarios) {
-        this(usuarios, Clock.systemUTC());
+        this(usuarios, new BarramentoEventos(), Clock.systemUTC());
+    }
+
+    public AutenticacaoService(UsuarioRepository usuarios, BarramentoEventos eventos) {
+        this(usuarios, eventos, Clock.systemUTC());
     }
 
     AutenticacaoService(UsuarioRepository usuarios, Clock relogio) {
+        this(usuarios, new BarramentoEventos(), relogio);
+    }
+
+    AutenticacaoService(UsuarioRepository usuarios, BarramentoEventos eventos, Clock relogio) {
         this.usuarios = usuarios;
+        this.eventos = eventos;
         this.relogio = relogio;
     }
 
-    /** Confere login e senha. Login inexistente, senha errada e usuario inativo dao a mesma resposta. */
-=======
-
-    private final UsuarioRepository usuarios;
-
-    public AutenticacaoService(UsuarioRepository usuarios) {
-        this.usuarios = usuarios;
-    }
-
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
+    /**
+     * Confere login e senha. Login inexistente, senha errada e usuario inativo dao a mesma resposta.
+     * RN03: no quinto erro seguido o login trava por 15 minutos, e enquanto estiver travado nem a senha
+     * certa entra. Acertar zera a contagem.
+     */
     public Usuario autenticar(String login, String senha) {
-        Usuario usuario = usuarios.buscarPorLogin(login).orElseThrow(AutenticacaoException::new);
-        if (!usuario.ativo() || senha == null || !BCrypt.checkpw(senha, usuario.senhaHash())) {
+        String chave = chaveDe(login);
+        Instant agora = Instant.now(relogio);
+        exigirNaoBloqueado(chave, agora);
+        Usuario usuario = usuarios.buscarPorLogin(login).orElse(null);
+        if (usuario == null || !usuario.ativo() || senha == null || !BCrypt.checkpw(senha, usuario.senhaHash())) {
+            registrarErro(chave, agora);
             throw new AutenticacaoException();
         }
+        tentativas.remove(chave);
         return usuario;
     }
 
-<<<<<<< HEAD
     /** Login: confere a credencial e abre uma sessao com token. */
     public SessaoAberta entrar(String login, String senha) {
         Usuario usuario = autenticar(login, senha);
@@ -129,14 +142,19 @@ public final class AutenticacaoService {
 
     /** Cadastro publico: a pessoa cria a propria conta. Perfil e status ficam fixos, nao vem do pedido. */
     public Usuario cadastrarPublico(String login, String email, String nome, String senha) {
-        return criar(login, email, nome, senha, PERFIL_PUBLICO, true);
+        Usuario novo = criar(login, email, nome, senha, PERFIL_PUBLICO, true);
+        auditar("Usuário " + novo.login() + " criou a própria conta como " + novo.perfil());
+        return novo;
     }
 
     /** Cadastro feito pelo gestor, com perfil e status escolhidos por ele. Sem gestor logado, nao passa. */
     public Usuario cadastrarUsuario(Usuario autor, String login, String email, String nome, String senha,
                                     Perfil perfil, boolean ativo) {
         Autorizacao.exigir(autor, Acao.CADASTRAR_USUARIO);
-        return criar(login, email, nome, senha, perfil, ativo);
+        Usuario novo = criar(login, email, nome, senha, perfil, ativo);
+        auditar("Usuário " + novo.login() + " cadastrado como " + novo.perfil() + (ativo ? "" : ", inativo")
+                + " por " + autor.login());
+        return novo;
     }
 
     /** Cria usuario na subida do sistema, sem autor. Usado pelo Main e pelos testes. */
@@ -160,6 +178,46 @@ public final class AutenticacaoService {
         }
         String hash = BCrypt.hashpw(senha, BCrypt.gensalt(CUSTO_BCRYPT));
         return usuarios.inserir(loginLimpo, emailLimpo, nomeLimpo, hash, perfil, ativo);
+    }
+
+    private void exigirNaoBloqueado(String chave, Instant agora) {
+        Tentativas atual = tentativas.get(chave);
+        if (atual == null || atual.bloqueadoAte() == null) {
+            return;
+        }
+        if (agora.isBefore(atual.bloqueadoAte())) {
+            throw new ContaBloqueadaException(minutosAte(agora, atual.bloqueadoAte()));
+        }
+        // passou o tempo: comeca a contar do zero
+        tentativas.remove(chave);
+    }
+
+    private void registrarErro(String chave, Instant agora) {
+        Tentativas atual = tentativas.merge(chave, new Tentativas(1, null),
+                (velha, nova) -> new Tentativas(velha.erros() + 1, null));
+        if (atual.erros() >= MAX_TENTATIVAS) {
+            Instant ate = agora.plus(TEMPO_BLOQUEIO);
+            tentativas.put(chave, new Tentativas(atual.erros(), ate));
+            auditar("Login " + chave + " bloqueado por " + TEMPO_BLOQUEIO.toMinutes() + " minutos após "
+                    + MAX_TENTATIVAS + " tentativas erradas");
+            throw new ContaBloqueadaException(TEMPO_BLOQUEIO.toMinutes());
+        }
+    }
+
+    private static long minutosAte(Instant agora, Instant ate) {
+        long segundos = Duration.between(agora, ate).toSeconds();
+        return Math.max(1, (segundos + 59) / 60);
+    }
+
+    /** Ana e ANA sao a mesma chave aqui, pra trocar maiuscula nao driblar o bloqueio. */
+    private static String chaveDe(String login) {
+        return login == null ? "" : login.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void auditar(String detalhe) {
+        // o relogio e UTC; o log usa a hora local, igual as outras operacoes
+        eventos.publicar(new OperacaoRealizada("USUARIO", detalhe,
+                LocalDateTime.ofInstant(Instant.now(relogio), ZoneId.systemDefault())));
     }
 
     private String novoToken() {
@@ -206,16 +264,5 @@ public final class AutenticacaoService {
         if (senha.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES_SENHA) {
             throw new IllegalArgumentException("A senha é longa demais: o limite é de 72 bytes.");
         }
-=======
-    /** Cria usuario ja com a senha em hash. Usado na subida do sistema. */
-    public Usuario cadastrar(String login, String senha, Perfil perfil) {
-        if (login == null || login.isBlank()) {
-            throw new IllegalArgumentException("O login é obrigatório.");
-        }
-        if (senha == null || senha.length() < 6) {
-            throw new IllegalArgumentException("A senha precisa ter pelo menos 6 caracteres.");
-        }
-        return usuarios.inserir(login.trim(), BCrypt.hashpw(senha, BCrypt.gensalt(CUSTO_BCRYPT)), perfil);
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 }

@@ -2,7 +2,9 @@ package br.ufpb.aps.granja.model;
 
 import br.ufpb.aps.granja.model.excecao.LoteEncerradoException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,10 +23,20 @@ public class Lote {
     private final String codigo;
     private final Especie especie;
     private final Quantidade quantidadeInicial;
+    /** Dia em que os animais chegaram na granja. Base da idade (UC05). */
+    private final LocalDate dataAlojamento;
+    /** Idade que os animais ja tinham ao chegar. Pintinho de um dia entra com 1, por exemplo. */
+    private final int idadeInicialDias;
     private Quantidade saldo;
     private StatusLote status;
 
+    /** Lote alojado hoje com idade zero. Usado nos testes de dominio. */
     public Lote(Long id, String codigo, Especie especie, Quantidade quantidadeInicial) {
+        this(id, codigo, especie, quantidadeInicial, LocalDate.now(), 0);
+    }
+
+    public Lote(Long id, String codigo, Especie especie, Quantidade quantidadeInicial,
+                LocalDate dataAlojamento, int idadeInicialDias) {
         this.id = id;
         this.codigo = Objects.requireNonNull(codigo, "codigo");
         this.especie = Objects.requireNonNull(especie, "especie");
@@ -32,14 +44,20 @@ public class Lote {
         if (quantidadeInicial.ehZero()) {
             throw new IllegalArgumentException("A quantidade inicial deve ser maior que zero");
         }
+        this.dataAlojamento = Objects.requireNonNull(dataAlojamento, "dataAlojamento");
+        if (idadeInicialDias < 0) {
+            throw new IllegalArgumentException("A idade inicial não pode ser negativa");
+        }
+        this.idadeInicialDias = idadeInicialDias;
         this.saldo = quantidadeInicial;
         this.status = StatusLote.ATIVO;
     }
 
     /** Monta o lote a partir do banco. Os dados ja passaram no cadastro, entao nao valida de novo. */
     public static Lote reconstituir(Long id, String codigo, Especie especie, Quantidade quantidadeInicial,
+                                    LocalDate dataAlojamento, int idadeInicialDias,
                                     Quantidade saldo, StatusLote status) {
-        Lote lote = new Lote(id, codigo, especie, quantidadeInicial);
+        Lote lote = new Lote(id, codigo, especie, quantidadeInicial, dataAlojamento, idadeInicialDias);
         lote.saldo = saldo;
         lote.status = status;
         return lote;
@@ -82,20 +100,34 @@ public class Lote {
         return soma == saldo.valor();
     }
 
-    public boolean estaAtivo() {
-        return status == StatusLote.ATIVO;
+    /**
+     * UC05: idade em dias num dia qualquer = idade na chegada + dias desde o alojamento.
+     * Dia antes do alojamento nao faz sentido, entao recusa.
+     */
+    public int idadeEmDias(LocalDate dia) {
+        if (dia.isBefore(dataAlojamento)) {
+            throw new IllegalArgumentException("A data consultada é anterior ao alojamento do lote.");
+        }
+        return idadeInicialDias + (int) ChronoUnit.DAYS.between(dataAlojamento, dia);
     }
 
-    private void exigirAtivo() {
+    /** RN05 pra quem registra coisa ligada ao lote sem mexer no saldo (vacina, producao...). */
+    public void exigirAtivo() {
         if (!estaAtivo()) {
             throw new LoteEncerradoException(codigo);
         }
+    }
+
+    public boolean estaAtivo() {
+        return status == StatusLote.ATIVO;
     }
 
     public Long id() { return id; }
     public String codigo() { return codigo; }
     public Especie especie() { return especie; }
     public Quantidade quantidadeInicial() { return quantidadeInicial; }
+    public LocalDate dataAlojamento() { return dataAlojamento; }
+    public int idadeInicialDias() { return idadeInicialDias; }
     public Quantidade saldo() { return saldo; }
     public StatusLote status() { return status; }
 }

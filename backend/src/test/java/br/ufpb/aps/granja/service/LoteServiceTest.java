@@ -173,10 +173,12 @@ class LoteServiceTest {
 
         lotes.registrarMortalidade(c.funcionario, lote.id(), 3, "doença", codigo("M-1"), AGORA);
 
-        List<AuditoriaRepository.Entrada> entradas = c.app.auditoria().listar();
-        assertEquals(1, entradas.size());
-        assertEquals("MORTALIDADE", entradas.get(0).categoria());
-        assertTrue(entradas.get(0).detalhe().contains("LOT-2026-001"));
+        // o cadastro do lote tambem entra no log, entao procura a linha da mortalidade
+        List<AuditoriaRepository.Entrada> mortes = c.app.auditoria().listar().stream()
+                .filter(e -> e.categoria().equals("MORTALIDADE"))
+                .toList();
+        assertEquals(1, mortes.size());
+        assertTrue(mortes.get(0).detalhe().contains("LOT-2026-001"));
     }
 
     @Test

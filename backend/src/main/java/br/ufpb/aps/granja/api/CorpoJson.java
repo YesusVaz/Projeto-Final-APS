@@ -58,6 +58,11 @@ final class CorpoJson {
         return valor.asInt();
     }
 
+    /** Inteiro que pode faltar. Faltando, vale o padrao. */
+    static int inteiroOpcional(JsonNode corpo, String campo, int padrao) {
+        return corpo == null || !corpo.hasNonNull(campo) ? padrao : inteiro(corpo, campo);
+    }
+
     static long longo(JsonNode corpo, String campo) {
         JsonNode valor = campoObrigatorio(corpo, campo);
         if (!valor.isIntegralNumber()) {
@@ -88,9 +93,15 @@ final class CorpoJson {
     }
 
     static LocalDate dataOpcional(JsonNode corpo, String campo) {
+        LocalDate data = dataOuNula(corpo, campo);
+        return data == null ? LocalDate.now() : data;
+    }
+
+    /** Data que pode nao existir, tipo a proxima dose da vacina. */
+    static LocalDate dataOuNula(JsonNode corpo, String campo) {
         String valor = textoOpcional(corpo, campo);
         if (valor == null) {
-            return LocalDate.now();
+            return null;
         }
         try {
             return LocalDate.parse(valor);

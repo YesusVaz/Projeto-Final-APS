@@ -3,27 +3,20 @@ package br.ufpb.aps.granja.service;
 import br.ufpb.aps.granja.Cenario;
 import br.ufpb.aps.granja.model.Perfil;
 import br.ufpb.aps.granja.model.Usuario;
-<<<<<<< HEAD
 import br.ufpb.aps.granja.model.excecao.AcessoNegadoException;
 import br.ufpb.aps.granja.model.excecao.AutenticacaoException;
 import br.ufpb.aps.granja.model.excecao.EmailJaExisteException;
 import br.ufpb.aps.granja.model.excecao.LoginJaExisteException;
-=======
-import br.ufpb.aps.granja.model.excecao.AutenticacaoException;
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-<<<<<<< HEAD
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 
-=======
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -87,7 +80,6 @@ class AutenticacaoServiceTest {
 
     @Test
     void senhaCurtaEhRecusadaNoCadastro() {
-<<<<<<< HEAD
         assertThrows(IllegalArgumentException.class,
                 () -> auth.cadastrar("novo", "novo@granja.local", "Novo", "123", Perfil.FUNCIONARIO));
     }
@@ -252,8 +244,5 @@ class AutenticacaoServiceTest {
         public Instant instant() {
             return agora;
         }
-=======
-        assertThrows(IllegalArgumentException.class, () -> auth.cadastrar("novo", "123", Perfil.FUNCIONARIO));
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 }

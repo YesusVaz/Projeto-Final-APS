@@ -5,13 +5,15 @@ import br.ufpb.aps.granja.model.Lote;
 import br.ufpb.aps.granja.model.MovimentoLote;
 import br.ufpb.aps.granja.model.Quantidade;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 /** Contrato de persistencia dos lotes e do historico. O servico so conhece essa interface. */
 public interface LoteRepository {
 
-    Lote inserir(String codigo, Especie especie, Quantidade quantidadeInicial);
+    Lote inserir(String codigo, Especie especie, Quantidade quantidadeInicial, LocalDate dataAlojamento,
+                 int idadeInicialDias);
 
     Optional<Lote> buscarPorId(long id);
 

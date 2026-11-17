@@ -18,6 +18,7 @@ public final class Banco implements UnidadeDeTrabalho, AutoCloseable {
             "CREATE TABLE IF NOT EXISTS lancamento (codigo TEXT PRIMARY KEY, data_hora TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS lote (id INTEGER PRIMARY KEY AUTOINCREMENT, codigo TEXT NOT NULL UNIQUE, "
                     + "especie TEXT NOT NULL, quantidade_inicial INTEGER NOT NULL CHECK (quantidade_inicial > 0), "
+                    + "data_alojamento TEXT NOT NULL, idade_inicial_dias INTEGER NOT NULL CHECK (idade_inicial_dias >= 0), "
                     + "saldo INTEGER NOT NULL CHECK (saldo >= 0), status TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS movimento_lote (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + "lote_id INTEGER NOT NULL REFERENCES lote(id), tipo TEXT NOT NULL, "
@@ -36,18 +37,38 @@ public final class Banco implements UnidadeDeTrabalho, AutoCloseable {
                     + "quantidade_kg INTEGER NOT NULL CHECK (quantidade_kg > 0), data TEXT NOT NULL, "
                     + "codigo TEXT NOT NULL REFERENCES lancamento(codigo))",
             "CREATE TABLE IF NOT EXISTS usuario (id INTEGER PRIMARY KEY AUTOINCREMENT, login TEXT NOT NULL UNIQUE, "
-<<<<<<< HEAD
                     + "nome TEXT NOT NULL, email TEXT NOT NULL UNIQUE, senha_hash TEXT NOT NULL, perfil TEXT NOT NULL, ativo INTEGER NOT NULL)",
-=======
-                    + "senha_hash TEXT NOT NULL, perfil TEXT NOT NULL, ativo INTEGER NOT NULL)",
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
             "CREATE TABLE IF NOT EXISTS auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria TEXT NOT NULL, "
                     + "detalhe TEXT NOT NULL, data_hora TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS alerta_mortalidade (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     + "lote_id INTEGER NOT NULL REFERENCES lote(id), codigo_lote TEXT NOT NULL, "
                     + "nivel TEXT NOT NULL, data_hora TEXT NOT NULL)",
             "CREATE TABLE IF NOT EXISTS configuracao_alerta (id INTEGER PRIMARY KEY CHECK (id = 1), "
-                    + "criterio TEXT NOT NULL, atencao REAL NOT NULL, critico REAL NOT NULL)"
+                    + "criterio TEXT NOT NULL, atencao REAL NOT NULL, critico REAL NOT NULL)",
+            // RN15: o log de auditoria so aceita INSERT. Quem barra e o proprio banco
+            "CREATE TRIGGER IF NOT EXISTS auditoria_sem_alteracao BEFORE UPDATE ON auditoria "
+                    + "BEGIN SELECT RAISE(ABORT, 'O log de auditoria é imutável (RN15).'); END",
+            "CREATE TRIGGER IF NOT EXISTS auditoria_sem_exclusao BEFORE DELETE ON auditoria "
+                    + "BEGIN SELECT RAISE(ABORT, 'O log de auditoria é imutável (RN15).'); END",
+            "CREATE TABLE IF NOT EXISTS fornecedor (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, "
+                    + "documento TEXT NOT NULL UNIQUE, telefone TEXT, email TEXT)",
+            "CREATE TABLE IF NOT EXISTS vacinacao (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "lote_id INTEGER NOT NULL REFERENCES lote(id), insumo_id INTEGER NOT NULL REFERENCES insumo(id), "
+                    + "doses INTEGER NOT NULL CHECK (doses > 0), data TEXT NOT NULL, proxima_dose TEXT, "
+                    + "codigo TEXT NOT NULL REFERENCES lancamento(codigo), observacao TEXT)",
+            "CREATE TABLE IF NOT EXISTS ocorrencia_sanitaria (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "lote_id INTEGER NOT NULL REFERENCES lote(id), descricao TEXT NOT NULL, data_abertura TEXT NOT NULL, "
+                    + "status TEXT NOT NULL, data_encerramento TEXT)",
+            "CREATE TABLE IF NOT EXISTS tratamento (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "ocorrencia_id INTEGER NOT NULL REFERENCES ocorrencia_sanitaria(id), "
+                    + "insumo_id INTEGER NOT NULL REFERENCES insumo(id), quantidade INTEGER NOT NULL CHECK (quantidade > 0), "
+                    + "data TEXT NOT NULL, codigo TEXT NOT NULL REFERENCES lancamento(codigo), observacao TEXT)",
+            "CREATE TABLE IF NOT EXISTS producao (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "lote_id INTEGER NOT NULL REFERENCES lote(id), tipo TEXT NOT NULL, data TEXT NOT NULL, "
+                    + "valor INTEGER NOT NULL CHECK (valor >= 0), vivos INTEGER, indicador REAL, "
+                    + "codigo TEXT NOT NULL REFERENCES lancamento(codigo), UNIQUE (lote_id, tipo, data))",
+            "CREATE TABLE IF NOT EXISTS parametros_sistema (id INTEGER PRIMARY KEY CHECK (id = 1), "
+                    + "dias_aviso_vacina INTEGER NOT NULL, dias_ocorrencia_aberta INTEGER NOT NULL)"
     };
 
     private final Connection conexao;

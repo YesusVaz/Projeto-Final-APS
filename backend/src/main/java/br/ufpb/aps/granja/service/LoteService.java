@@ -2,6 +2,7 @@ package br.ufpb.aps.granja.service;
 
 import br.ufpb.aps.granja.evento.BarramentoEventos;
 import br.ufpb.aps.granja.evento.MortalidadeRegistrada;
+import br.ufpb.aps.granja.evento.OperacaoRealizada;
 import br.ufpb.aps.granja.model.Acao;
 import br.ufpb.aps.granja.model.CodigoLancamento;
 import br.ufpb.aps.granja.model.Especie;
@@ -11,10 +12,6 @@ import br.ufpb.aps.granja.model.MovimentoLote;
 import br.ufpb.aps.granja.model.Quantidade;
 import br.ufpb.aps.granja.model.TipoMovimentoLote;
 import br.ufpb.aps.granja.model.Usuario;
-<<<<<<< HEAD
-=======
-import br.ufpb.aps.granja.model.excecao.NaoEncontradoException;
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
 import br.ufpb.aps.granja.policy.AlertaMortalidade;
 import br.ufpb.aps.granja.policy.NivelAlerta;
 import br.ufpb.aps.granja.policy.ResumoMortalidade;
@@ -27,7 +24,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** Casos de uso de lote: UC04 (cadastrar, consultar, encerrar) e UC06 (mortalidade). */
+/**
+ * Casos de uso de lote: UC04 (cadastrar, consultar, encerrar, baixa parcial), UC05 (idade)
+ * e UC06 (mortalidade).
+ */
 public final class LoteService {
 
     /** Resultado da mortalidade: lote atualizado e nivel de alerta avaliado. */
@@ -36,6 +36,10 @@ public final class LoteService {
 
     /** Lote com o historico completo e se bate com o saldo (RN06r). */
     public record ConsultaLote(Lote lote, List<MovimentoLote> historico, boolean consistente) {
+    }
+
+    /** UC05: idade do lote num dia. */
+    public record IdadeLote(Lote lote, LocalDate dia, int idadeDias) {
     }
 
     private final UnidadeDeTrabalho uow;
@@ -56,32 +60,83 @@ public final class LoteService {
         this.eventos = eventos;
     }
 
-    /** UC04: grava o lote e o movimento inicial juntos (RN23, P03). Gera o LOT-AAAA-NNN (RN04). */
+    /** UC04 sem dizer alojamento: os animais chegaram hoje, com idade zero. */
     public Lote cadastrar(Usuario usuario, CodigoLancamento codigo, Especie especie,
                           Quantidade quantidadeInicial, LocalDateTime agora) {
+        return cadastrar(usuario, codigo, especie, quantidadeInicial, agora.toLocalDate(), 0, agora);
+    }
+
+    /**
+     * UC04: grava o lote e o movimento inicial juntos (RN23, P03). Gera o LOT-AAAA-NNN (RN04).
+     * Alojamento e idade na chegada servem pra calcular a idade depois (UC05).
+     */
+    public Lote cadastrar(Usuario usuario, CodigoLancamento codigo, Especie especie, Quantidade quantidadeInicial,
+                          LocalDate dataAlojamento, int idadeInicialDias, LocalDateTime agora) {
         Autorizacao.exigir(usuario, Acao.CADASTRAR_LOTE);
         Validacao.positiva(quantidadeInicial.valor(), "quantidade inicial do lote");
-        return uow.executar(() -> {
+        if (idadeInicialDias < 0) {
+            throw new IllegalArgumentException("A idade inicial dos animais não pode ser negativa.");
+        }
+        if (dataAlojamento.isAfter(agora.toLocalDate())) {
+            throw new IllegalArgumentException("A data de alojamento não pode estar no futuro.");
+        }
+        Lote novo = uow.executar(() -> {
             lancamentos.registrar(codigo, agora);
             int ano = agora.getYear();
             String codigoLote = GeradorCodigoLote.gerar(ano, lotes.contarPorAno(ano) + 1);
-            Lote lote = lotes.inserir(codigoLote, especie, quantidadeInicial);
+            Lote lote = lotes.inserir(codigoLote, especie, quantidadeInicial, dataAlojamento, idadeInicialDias);
             lotes.registrarMovimento(lote.movimentoInicial(codigo, agora));
             return lote;
         });
+        eventos.publicar(new OperacaoRealizada("LOTE", "Lote " + novo.codigo() + " cadastrado com "
+                + quantidadeInicial.valor() + " animais (" + especie + ") por " + usuario.login(), agora));
+        return novo;
     }
 
     /** UC04.A: encerra o lote e grava a baixa do que sobrou no historico (RN21). */
     public Lote encerrar(Usuario usuario, long loteId, MotivoEncerramento motivo,
                          CodigoLancamento codigo, LocalDateTime agora) {
         Autorizacao.exigir(usuario, Acao.ENCERRAR_LOTE);
-        return uow.executar(() -> {
+        Lote encerrado = uow.executar(() -> {
             lancamentos.registrar(codigo, agora);
             Lote lote = carregar(loteId);
             lote.encerrar(motivo, codigo, agora).ifPresent(lotes::registrarMovimento);
             lotes.atualizar(lote);
             return lote;
         });
+        eventos.publicar(new OperacaoRealizada("ENCERRAMENTO",
+                "Lote " + encerrado.codigo() + " encerrado por " + motivo + " por " + usuario.login(), agora));
+        return encerrado;
+    }
+
+    /**
+     * Baixa parcial: venda, descarte ou transferencia de parte dos animais sem encerrar o lote.
+     * Mesmas regras da mortalidade: lote ativo (RN05), saldo nunca negativo (RN07), codigo unico (RN22).
+     */
+    public Lote registrarBaixa(Usuario usuario, long loteId, MotivoEncerramento motivo, int quantidade,
+                               String observacao, CodigoLancamento codigo, LocalDateTime agora) {
+        Autorizacao.exigir(usuario, Acao.REGISTRAR_BAIXA);
+        Validacao.positiva(quantidade, "quantidade da baixa");
+        Lote atualizado = uow.executar(() -> {
+            lancamentos.registrar(codigo, agora);
+            Lote lote = carregar(loteId);
+            MovimentoLote baixa = new MovimentoLote(null, loteId, motivo.tipoDeBaixa(), Quantidade.de(quantidade),
+                    codigo, agora, observacao);
+            lote.aplicar(baixa);
+            lotes.registrarMovimento(baixa);
+            lotes.atualizar(lote);
+            return lote;
+        });
+        eventos.publicar(new OperacaoRealizada("BAIXA", "Lote " + atualizado.codigo() + ": baixa de " + quantidade
+                + " por " + motivo + " por " + usuario.login(), agora));
+        return atualizado;
+    }
+
+    /** UC05: idade dos animais no dia pedido. */
+    public IdadeLote idade(Usuario usuario, long loteId, LocalDate dia) {
+        Autorizacao.exigir(usuario, Acao.CONSULTAR);
+        Lote lote = carregar(loteId);
+        return new IdadeLote(lote, dia, lote.idadeEmDias(dia));
     }
 
     /**
@@ -144,11 +199,6 @@ public final class LoteService {
     }
 
     private Lote carregar(long loteId) {
-<<<<<<< HEAD
         return Buscas.lote(lotes, loteId);
-=======
-        return lotes.buscarPorId(loteId)
-                .orElseThrow(() -> new NaoEncontradoException("Lote " + loteId + " não encontrado."));
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 }

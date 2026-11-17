@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,6 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BancoTest {
+
+    private static final LocalDate ALOJAMENTO = LocalDate.of(2026, 11, 17);
 
     @Test
     void bancoEmMemoriaComecaSemDados() {
@@ -26,7 +29,7 @@ class BancoTest {
     void executarConfirmaQuandoOTrabalhoTermina() {
         try (Banco banco = Banco.memoria()) {
             SqliteLoteRepository lotes = new SqliteLoteRepository(banco);
-            banco.executar(() -> lotes.inserir("LOT-2026-001", Especie.FRANGO_CORTE, Quantidade.de(10)));
+            banco.executar(() -> lotes.inserir("LOT-2026-001", Especie.FRANGO_CORTE, Quantidade.de(10), ALOJAMENTO, 0));
             assertEquals(1, lotes.listar().size());
         }
     }
@@ -36,7 +39,7 @@ class BancoTest {
         try (Banco banco = Banco.memoria()) {
             SqliteLoteRepository lotes = new SqliteLoteRepository(banco);
             assertThrows(IllegalStateException.class, () -> banco.executar(() -> {
-                lotes.inserir("LOT-2026-001", Especie.POEDEIRA, Quantidade.de(10));
+                lotes.inserir("LOT-2026-001", Especie.POEDEIRA, Quantidade.de(10), ALOJAMENTO, 0);
                 throw new IllegalStateException("falha no meio da operação");
             }));
             assertTrue(lotes.listar().isEmpty());
@@ -47,7 +50,7 @@ class BancoTest {
     void arquivoPersisteOsDadosEntreAberturas(@TempDir Path pasta) {
         String caminho = pasta.resolve("granja.db").toString();
         try (Banco banco = Banco.arquivo(caminho)) {
-            new SqliteLoteRepository(banco).inserir("LOT-2026-001", Especie.FRANGO_CORTE, Quantidade.de(10));
+            new SqliteLoteRepository(banco).inserir("LOT-2026-001", Especie.FRANGO_CORTE, Quantidade.de(10), ALOJAMENTO, 0);
         }
         try (Banco banco = Banco.arquivo(caminho)) {
             List<Lote> lotes = new SqliteLoteRepository(banco).listar();

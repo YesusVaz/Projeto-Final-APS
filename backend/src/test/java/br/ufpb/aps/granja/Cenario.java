@@ -20,18 +20,12 @@ public final class Cenario implements AutoCloseable {
     public Cenario() {
         this.banco = Banco.memoria();
         this.app = Composicao.criar(banco);
-<<<<<<< HEAD
         this.gestor = app.autenticacao().cadastrar("gestor", "gestor@granja.local", "Gestor de teste",
                 "senha-gestor", Perfil.GESTOR);
         this.tecnico = app.autenticacao().cadastrar("tecnico", "tecnico@granja.local", "Técnico de teste",
                 "senha-tecnico", Perfil.TECNICO);
         this.funcionario = app.autenticacao().cadastrar("funcionario", "funcionario@granja.local",
                 "Funcionário de teste", "senha-funcionario", Perfil.FUNCIONARIO);
-=======
-        this.gestor = app.autenticacao().cadastrar("gestor", "senha-gestor", Perfil.GESTOR);
-        this.tecnico = app.autenticacao().cadastrar("tecnico", "senha-tecnico", Perfil.TECNICO);
-        this.funcionario = app.autenticacao().cadastrar("funcionario", "senha-funcionario", Perfil.FUNCIONARIO);
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 
     @Override

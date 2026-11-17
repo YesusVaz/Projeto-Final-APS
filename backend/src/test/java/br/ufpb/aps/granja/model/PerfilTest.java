@@ -8,11 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PerfilTest {
 
     private Usuario com(Perfil perfil) {
-<<<<<<< HEAD
         return new Usuario(1L, "usuario", "usuario@granja.local", "Usuario de teste", "hash-bcrypt", perfil);
-=======
-        return new Usuario(1L, "usuario", "hash-bcrypt", perfil);
->>>>>>> a3481d5f595d5a9c67769d30c2b2a373c1db74b1
     }
 
     @Test
