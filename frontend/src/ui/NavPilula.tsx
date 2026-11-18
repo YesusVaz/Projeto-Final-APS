@@ -6,13 +6,16 @@ import {
   type KeyboardEvent,
   type PointerEvent as PointerReact,
 } from 'react'
+import { cn } from './cn'
 
-export type OpcaoNav<T extends string> = { id: T; rotulo: string }
-
-type NavegacaoProps<T extends string> = {
-  opcoes: OpcaoNav<T>[]
-  ativo: T
-  onMudar: (id: T) => void
+export type ItemNav<T extends string> = {
+  id: T
+  rotulo: string
+  // numero pequeno ao lado do nome, tipo alertas abertos
+  contador?: number
+  // item redondo so com o rotulo curto (avatar). precisa de descricao pro leitor de tela
+  compacto?: boolean
+  descricao?: string
 }
 
 type Medida = { x: number; largura: number }
@@ -28,14 +31,22 @@ type Gesto<T> = {
 // quanto o ponteiro precisa andar pra contar como arraste e nao como clique
 const LIMITE_ARRASTE = 4
 
-// ilha de navegacao. o destaque desliza ate a opcao escolhida e pode ser arrastado.
-// ao soltar, ele encaixa na opcao mais proxima
-export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: NavegacaoProps<T>) {
+type NavPilulaProps<T extends string> = {
+  itens: ItemNav<T>[]
+  ativo: T
+  onMudar: (id: T) => void
+  className?: string
+}
+
+// navbar em pilula, estilo Apple: vidro escuro, destaque que desliza ate o item escolhido
+// e pode ser arrastado. ao soltar, encaixa no item mais proximo. nao fica fixa: quem usa
+// decide onde ela fica (o cabecalho do layout)
+export function NavPilula<T extends string>({ itens, ativo, onMudar, className }: NavPilulaProps<T>) {
   const botoes = useRef(new Map<T, HTMLButtonElement>())
   const destaqueRef = useRef<HTMLSpanElement>(null)
   const gesto = useRef<Gesto<T> | null>(null)
   const removerEscutas = useRef<(() => void) | null>(null)
-  // so a opcao sob o destaque entra no estado, pra cor do texto acompanhar o arraste
+  // so o item sob o destaque entra no estado, pra cor do texto acompanhar o arraste
   const [previa, setPrevia] = useState<T | null>(null)
 
   function medir(id: T): Medida | null {
@@ -43,8 +54,7 @@ export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: Navegaca
     return botao ? { x: botao.offsetLeft, largura: botao.offsetWidth } : null
   }
 
-  // posiciona o destaque direto no DOM. sem estado, entao nao gera render extra.
-  // animado=false tira a transicao, que so pode ficar ligada fora do arraste
+  // posiciona o destaque direto no DOM. animado=false tira a transicao, que so pode ficar fora do arraste
   function posicionar(medida: Medida, animado: boolean) {
     const el = destaqueRef.current
     if (!el) return
@@ -53,29 +63,29 @@ export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: Navegaca
     el.style.width = `${medida.largura}px`
   }
 
-  // a opcao cujo centro fica mais perto do centro do destaque
-  function maisProxima(x: number, largura: number): T | null {
+  // o item cujo centro fica mais perto do centro do destaque
+  function maisProximo(x: number, largura: number): T | null {
     const centro = x + largura / 2
-    let escolhida: T | null = null
-    let menorDistancia = Infinity
-    for (const opcao of opcoes) {
-      const medida = medir(opcao.id)
+    let escolhido: T | null = null
+    let menor = Infinity
+    for (const item of itens) {
+      const medida = medir(item.id)
       if (!medida) continue
       const distancia = Math.abs(medida.x + medida.largura / 2 - centro)
-      if (distancia < menorDistancia) {
-        menorDistancia = distancia
-        escolhida = opcao.id
+      if (distancia < menor) {
+        menor = distancia
+        escolhido = item.id
       }
     }
-    return escolhida
+    return escolhido
   }
 
-  // o destaque acompanha a opcao ativa. quando o ativo muda, ele desliza ate la
+  // o destaque acompanha o item ativo. quando o ativo muda, ele desliza ate la
   useLayoutEffect(() => {
     if (gesto.current) return
     const medida = medir(ativo)
     if (medida) posicionar(medida, true)
-  }, [ativo, opcoes])
+  }, [ativo, itens])
 
   // janela redimensionada ou fonte carregada depois: mede de novo sem animar
   useEffect(() => {
@@ -101,17 +111,17 @@ export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: Navegaca
 
     function aoMover(e: PointerEvent) {
       const atual = gesto.current
-      const primeira = medir(opcoes[0].id)
-      const ultima = medir(opcoes[opcoes.length - 1].id)
-      if (!atual || !primeira || !ultima) return
+      const primeiro = medir(itens[0].id)
+      const ultimo = medir(itens[itens.length - 1].id)
+      if (!atual || !primeiro || !ultimo) return
       const dx = e.clientX - atual.inicioX
-      const x = Math.min(Math.max(atual.origem.x + dx, primeira.x), ultima.x)
+      const x = Math.min(Math.max(atual.origem.x + dx, primeiro.x), ultimo.x)
       atual.movido = atual.movido || Math.abs(dx) > LIMITE_ARRASTE
       posicionar({ x, largura: atual.origem.largura }, false)
-      const proxima = maisProxima(x, atual.origem.largura)
-      if (proxima !== null && proxima !== atual.previa) {
-        atual.previa = proxima
-        setPrevia(proxima)
+      const proximo = maisProximo(x, atual.origem.largura)
+      if (proximo !== null && proximo !== atual.previa) {
+        atual.previa = proximo
+        setPrevia(proximo)
       }
     }
 
@@ -130,10 +140,9 @@ export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: Navegaca
         return
       }
 
-      const destino = atual.previa
-      const medida = medir(destino)
+      const medida = medir(atual.previa)
       if (medida) posicionar(medida, true)
-      onMudar(destino)
+      onMudar(atual.previa)
     }
 
     window.addEventListener('pointermove', aoMover)
@@ -148,10 +157,10 @@ export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: Navegaca
     const passo = evento.key === 'ArrowRight' ? 1 : evento.key === 'ArrowLeft' ? -1 : 0
     if (passo === 0) return
     evento.preventDefault()
-    const indice = opcoes.findIndex((opcao) => opcao.id === ativo)
-    const proxima = opcoes[(indice + passo + opcoes.length) % opcoes.length]
-    onMudar(proxima.id)
-    botoes.current.get(proxima.id)?.focus()
+    const indice = itens.findIndex((item) => item.id === ativo)
+    const proximo = itens[(indice + passo + itens.length) % itens.length]
+    onMudar(proximo.id)
+    botoes.current.get(proximo.id)?.focus()
   }
 
   const selecionado = previa ?? ativo
@@ -161,32 +170,44 @@ export function Navegacao<T extends string>({ opcoes, ativo, onMudar }: Navegaca
       aria-label="Navegação principal"
       onPointerDown={aoPressionar}
       onKeyDown={aoTeclar}
-      className="fixed top-5 left-1/2 z-10 flex h-12 -translate-x-1/2 touch-none items-center rounded-full bg-ink p-1.5 whitespace-nowrap text-paper select-none"
+      className={cn(
+        'relative flex h-13 animate-descer touch-none items-center rounded-full bg-ink/90 p-1.5 whitespace-nowrap text-paper shadow-[0_10px_30px_rgb(11_11_11/0.14)] backdrop-blur-xl backdrop-saturate-150 select-none',
+        className,
+      )}
     >
       <span
         ref={destaqueRef}
         aria-hidden="true"
         className="absolute inset-y-1.5 left-0 rounded-full bg-paper transition-[transform,width] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"
-      >
-        <span className="absolute top-1/2 left-2 size-1.5 -translate-y-1/2 rounded-full bg-accent" />
-      </span>
-      {opcoes.map((opcao) => (
-        <button
-          key={opcao.id}
-          ref={(el) => {
-            if (el) botoes.current.set(opcao.id, el)
-            else botoes.current.delete(opcao.id)
-          }}
-          type="button"
-          onClick={() => onMudar(opcao.id)}
-          aria-current={opcao.id === ativo ? 'page' : undefined}
-          className={`relative flex h-9 items-center justify-center px-5 text-[13px] transition-colors duration-300 ${
-            opcao.id === selecionado ? 'font-medium text-ink' : 'text-paper-2 hover:text-paper'
-          }`}
-        >
-          {opcao.rotulo}
-        </button>
-      ))}
+      />
+      {itens.map((item) => {
+        const aqui = item.id === selecionado
+        return (
+          <button
+            key={item.id}
+            ref={(el) => {
+              if (el) botoes.current.set(item.id, el)
+              else botoes.current.delete(item.id)
+            }}
+            type="button"
+            onClick={() => onMudar(item.id)}
+            aria-current={item.id === ativo ? 'page' : undefined}
+            aria-label={item.descricao}
+            className={cn(
+              'relative flex h-10 items-center justify-center gap-2 rounded-full text-sm transition-colors duration-300',
+              item.compacto ? 'ml-1 w-10 text-[13px]' : 'px-4',
+              aqui ? 'font-medium text-ink' : 'text-paper-2 hover:text-paper',
+            )}
+          >
+            {item.rotulo}
+            {item.contador ? (
+              <span className="inline-flex h-5 min-w-5 animate-pulso items-center justify-center rounded-full bg-contador px-1.5 text-[11.5px] font-semibold text-white">
+                {item.contador}
+              </span>
+            ) : null}
+          </button>
+        )
+      })}
     </nav>
   )
 }

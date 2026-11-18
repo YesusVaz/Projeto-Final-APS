@@ -1,0 +1,17 @@
+npm warn Unknown user config "public-hoist-pattern". This will stop working in the next major version of npm.
+[2m20:04:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+
+  [32m[1mVITE[22m v8.3.8[39m  [2mready in [0m[1m836[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5180[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m20:19:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/sessao/SessaoProvider.tsx, /src/index.css[22m
+[2m20:19:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/sessao/SessaoProvider.tsx, /src/sessao/RotaProtegida.tsx, /src/telas/acesso/Cadastro.tsx, /src/telas/lotes/Lotes.tsx, /src/telas/lotes/NovoLote.tsx, /src/layout/LayoutApp.tsx, /src/telas/inicio/Inicio.tsx, /src/telas/lotes/DetalheLote.tsx, /src/telas/acesso/Entrar.tsx, /src/telas/lotes/DialogosLote.tsx, /src/index.css[22m
+[2m20:19:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/sessao/RotaProtegida.tsx, /src/index.css[22m
+[2m20:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m20:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m20:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m20:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m20:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m20:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m20:22:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
