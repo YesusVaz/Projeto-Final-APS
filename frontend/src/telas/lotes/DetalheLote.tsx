@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { dataCompleta, numero } from '../../api/formatar'
-import { consultarLote, historicoDoLote, idadeDoLote } from '../../api/lotes'
-import { ROTULO_ESPECIE, ROTULO_STATUS_LOTE } from '../../api/tipos'
+import { consultarLote, historicoDoLote, idadeDoLote, listarAlertasMortalidade } from '../../api/lotes'
+import { ROTULO_ESPECIE, ROTULO_NIVEL, ROTULO_STATUS_LOTE } from '../../api/tipos'
 import { useCarregar } from '../../hooks/useCarregar'
 import { permite } from '../../sessao/permissoes'
 import { useLogado } from '../../sessao/sessaoContexto'
@@ -18,6 +18,7 @@ import {
   Selo,
   TituloSecao,
 } from '../../ui'
+import { NIVEL_SELO, nivelPorLote } from '../comum/lotes'
 import { DialogoBaixa, DialogoEncerrar, DialogoMortalidade } from './DialogosLote'
 import { LinhaDoTempo } from './LinhaDoTempo'
 
@@ -34,6 +35,7 @@ function Conteudo({ id }: { id: number }) {
   const lote = useCarregar((token) => consultarLote(token, id))
   const idade = useCarregar((token) => idadeDoLote(token, id))
   const historico = useCarregar((token) => historicoDoLote(token, id))
+  const alertas = useCarregar(listarAlertasMortalidade)
 
   const [aberto, setAberto] = useState<Aberto>(null)
   // cada abertura monta o dialogo de novo: campos limpos e um codigoLancamento novo
@@ -47,6 +49,7 @@ function Conteudo({ id }: { id: number }) {
     lote.recarregar()
     idade.recarregar()
     historico.recarregar()
+    alertas.recarregar()
   }
 
   if (Number.isNaN(id)) return <NaoEncontrado />
@@ -74,6 +77,8 @@ function Conteudo({ id }: { id: number }) {
   const podeBaixa = ativo && permite(perfil, 'registrarBaixa')
   const podeEncerrar = ativo && permite(perfil, 'encerrarLote')
   const dadosIdade = idade.carga.situacao === 'pronto' ? idade.carga.dados : null
+  // a situacao do lote ativo e o nivel da mortalidade, como na lista de lotes
+  const nivel = nivelPorLote(alertas.carga.situacao === 'pronto' ? alertas.carga.dados : []).get(dados.id) ?? 'NORMAL'
 
   const propsDialogo = { lote: dados, onFechar: () => setAberto(null), onConcluir: atualizar }
 
@@ -92,7 +97,6 @@ function Conteudo({ id }: { id: number }) {
         descricao={`${ROTULO_ESPECIE[dados.especie]}${dadosIdade ? ` · alojado em ${dataCompleta(dadosIdade.dataAlojamento)}` : ''}`}
         acoes={
           <>
-            <Selo nivel={ativo ? 'normal' : 'neutro'}>{ROTULO_STATUS_LOTE[dados.status]}</Selo>
             {podeMortalidade ? (
               <Botao variante="contorno" className="min-h-11" onClick={() => abrir('mortalidade')}>
                 Registrar mortalidade
@@ -112,25 +116,30 @@ function Conteudo({ id }: { id: number }) {
         }
       />
 
+      <div className="-mt-2 mb-8 flex items-center gap-2.5">
+        {ativo ? <Selo nivel={NIVEL_SELO[nivel]}>{ROTULO_NIVEL[nivel]}</Selo> : <Selo nivel="neutro">{ROTULO_STATUS_LOTE[dados.status]}</Selo>}
+      </div>
+
       {!consistente ? (
         <Aviso tom="critico" destaque="O saldo não bate com os movimentos." className="mb-8">
           O saldo registrado do lote é diferente da soma dos movimentos. Avise o gestor antes de lançar mais dados.
         </Aviso>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-x-6 gap-y-8 pb-10 lg:grid-cols-4">
-        <Estatistica indice={0} valor={dados.saldo} rotulo="Saldo" descricao={`de ${numero(dados.quantidadeInicial)} aves`} />
+      <section className="grid grid-cols-2 gap-x-7 gap-y-7 pb-9 lg:grid-cols-4">
+        <Estatistica tamanho="medio" indice={0} valor={dados.saldo} rotulo="Saldo" descricao={`de ${numero(dados.quantidadeInicial)} aves`} />
         <Estatistica
+          tamanho="medio"
           indice={1}
           valor={dadosIdade ? dadosIdade.idadeDias : '—'}
           rotulo="Dias de idade"
           descricao={dadosIdade ? `${dadosIdade.semanas} semanas` : 'não carregou'}
         />
-        <Estatistica indice={2} valor={dados.quantidadeInicial - dados.saldo} rotulo="Aves a menos" descricao="desde a entrada" />
+        <Estatistica tamanho="medio" indice={2} valor={dados.quantidadeInicial - dados.saldo} rotulo="Aves a menos" descricao="desde a entrada" />
       </section>
 
       <section aria-labelledby="titulo-historico" className="max-w-[640px]">
-        <TituloSecao id="titulo-historico" className="mb-3">
+        <TituloSecao id="titulo-historico" className="mb-5 text-lg tracking-[-0.015em] text-ink">
           Histórico
         </TituloSecao>
         {historico.carga.situacao === 'carregando' ? <EsqueletoLista linhas={4} /> : null}

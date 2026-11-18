@@ -43,3 +43,15 @@ export async function cadastrarUsuario(token: string, novo: NovoUsuario): Promis
   })
   return { ...dados, perfil: perfilDaApi(dados.perfil) }
 }
+
+// so o gestor consegue. a API devolve o perfil em maiusculo
+export async function listarUsuarios(token: string): Promise<UsuarioCriado[]> {
+  const lista = await chamar<UsuarioApi[]>('/usuarios', { token })
+  return lista.map((u) => ({ ...u, perfil: perfilDaApi(u.perfil) }))
+}
+
+// muda so o campo ativo. usuario inativo nao consegue entrar
+export async function alterarStatusUsuario(token: string, id: number, ativo: boolean): Promise<UsuarioCriado> {
+  const dados = await chamar<UsuarioApi>(`/usuarios/${id}/status`, { metodo: 'PUT', token, corpo: { ativo } })
+  return { ...dados, perfil: perfilDaApi(dados.perfil) }
+}

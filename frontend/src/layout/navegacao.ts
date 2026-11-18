@@ -17,9 +17,9 @@ const ITENS: ItemNavegacao[] = [
   { id: 'inicio', rotulo: 'Início', icone: 'inicio', caminho: '/' },
   { id: 'lotes', rotulo: 'Lotes', icone: 'lotes', caminho: '/lotes' },
   { id: 'estoque', rotulo: 'Estoque', icone: 'estoque', caminho: '/estoque', acao: 'movimentarEstoque' },
-  { id: 'alertas', rotulo: 'Alertas', icone: 'alertas', caminho: '/alertas' },
   { id: 'sanidade', rotulo: 'Sanidade', icone: 'sanidade', caminho: '/sanidade', acao: 'registrarVacinacao' },
   { id: 'producao', rotulo: 'Produção', icone: 'producao', caminho: '/producao', acao: 'registrarProducao' },
+  { id: 'alertas', rotulo: 'Alertas', icone: 'alertas', caminho: '/alertas' },
 ]
 
 export function itensDoPerfil(perfil: Perfil): ItemNavegacao[] {
@@ -39,10 +39,10 @@ type Atalho = { rotulo: string; descricao: string; icone: NomeIcone; caminho: st
 export const REGISTROS: Atalho[] = [
   { rotulo: 'Registrar mortalidade', descricao: 'Aves perdidas no lote', icone: 'baixa', caminho: '/mortalidade', acao: 'registrarMortalidade' },
   { rotulo: 'Registrar alimentação', descricao: 'Ração usada no lote', icone: 'racao', caminho: '/alimentacao', acao: 'registrarAlimentacao' },
-  { rotulo: 'Movimentar estoque', descricao: 'Entrada ou saída de insumo', icone: 'caminhao', caminho: '/estoque/entrada', acao: 'movimentarEstoque' },
-  { rotulo: 'Registrar vacinação', descricao: 'Doses aplicadas no lote', icone: 'vacina', caminho: '/sanidade/vacinacao', acao: 'registrarVacinacao' },
+  { rotulo: 'Movimentar estoque', descricao: 'Entrada ou saída de insumo', icone: 'caminhao', caminho: '/estoque?entrada=1', acao: 'movimentarEstoque' },
+  { rotulo: 'Registrar vacinação', descricao: 'Doses aplicadas no lote', icone: 'vacina', caminho: '/sanidade?vacinar=1', acao: 'registrarVacinacao' },
   { rotulo: 'Registrar produção', descricao: 'Postura ou pesagem', icone: 'producao', caminho: '/producao', acao: 'registrarProducao' },
-  { rotulo: 'Novo lote', descricao: 'Alojar um novo grupo de aves', icone: 'lotes', caminho: '/lotes/novo', acao: 'cadastrarLote' },
+  { rotulo: 'Novo lote', descricao: 'Alojar um novo grupo de aves', icone: 'lotes', caminho: '/lotes?novo=1', acao: 'cadastrarLote' },
 ]
 
 export function registrosDoPerfil(perfil: Perfil): Atalho[] {

@@ -18,7 +18,7 @@ export function Interruptor({ marcado, onMudar, rotulo, desativado }: MarcadorPr
       aria-label={rotulo}
       disabled={desativado}
       onClick={() => onMudar(!marcado)}
-      className={cn('relative h-6 w-[42px] shrink-0 rounded-full transition-colors duration-250 disabled:opacity-45', marcado ? 'bg-ink' : 'bg-ink-4')}
+      className={cn('relative h-6 w-[42px] shrink-0 rounded-full transition-colors duration-250 disabled:opacity-45', marcado ? 'bg-ink' : 'bg-[#c9c9c2]')}
     >
       <span
         className={cn(

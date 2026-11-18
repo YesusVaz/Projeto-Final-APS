@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { cn } from './cn'
 import { Icone, type NomeIcone } from './Icone'
 
@@ -13,15 +13,27 @@ type MenuProps = {
   gatilho: (props: PropsGatilho) => ReactNode
   children: ReactNode
   alinhar?: 'direita' | 'esquerda'
+  // controlado de fora: quem abre e o avatar da navbar, que marca o botao com data-abre-menu
+  aberto?: boolean
+  onMudarAberto?: (aberto: boolean) => void
 }
 
 const FecharMenu = createContext<() => void>(() => {})
 
 // menu que abre embaixo do gatilho. fecha com Esc, clique fora ou ao escolher um item.
 // setas pra cima e pra baixo andam pelos itens
-export function Menu({ gatilho, children, alinhar = 'direita' }: MenuProps) {
-  const [aberto, setAberto] = useState(false)
+export function Menu({ gatilho, children, alinhar = 'direita', aberto: abertoFora, onMudarAberto }: MenuProps) {
+  const [abertoDentro, setAbertoDentro] = useState(false)
+  const aberto = abertoFora ?? abertoDentro
   const raiz = useRef<HTMLDivElement>(null)
+  // refaz as escutas se o callback de fora mudar; e barato e evita guardar o callback numa ref
+  const definir = useCallback(
+    (valor: boolean) => {
+      setAbertoDentro(valor)
+      onMudarAberto?.(valor)
+    },
+    [onMudarAberto],
+  )
 
   useEffect(() => {
     if (!aberto) return
@@ -29,11 +41,12 @@ export function Menu({ gatilho, children, alinhar = 'direita' }: MenuProps) {
     raiz.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
 
     function aoClicarFora(e: PointerEvent) {
-      if (!raiz.current?.contains(e.target as Node)) setAberto(false)
+      const alvo = e.target as Element
+      if (!raiz.current?.contains(alvo) && !alvo.closest('[data-abre-menu]')) definir(false)
     }
     function aoTeclar(e: globalThis.KeyboardEvent) {
       if (e.key !== 'Escape') return
-      setAberto(false)
+      definir(false)
       raiz.current?.querySelector<HTMLElement>('[aria-haspopup]')?.focus()
     }
     window.addEventListener('pointerdown', aoClicarFora)
@@ -42,7 +55,7 @@ export function Menu({ gatilho, children, alinhar = 'direita' }: MenuProps) {
       window.removeEventListener('pointerdown', aoClicarFora)
       window.removeEventListener('keydown', aoTeclar)
     }
-  }, [aberto])
+  }, [aberto, definir])
 
   function andar(e: KeyboardEvent<HTMLDivElement>) {
     const passo = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0
@@ -55,9 +68,9 @@ export function Menu({ gatilho, children, alinhar = 'direita' }: MenuProps) {
 
   return (
     <div ref={raiz} className="relative inline-block">
-      {gatilho({ onClick: () => setAberto((a) => !a), 'aria-expanded': aberto, 'aria-haspopup': 'menu' })}
+      {gatilho({ onClick: () => definir(!aberto), 'aria-expanded': aberto, 'aria-haspopup': 'menu' })}
       {aberto ? (
-        <FecharMenu value={() => setAberto(false)}>
+        <FecharMenu value={() => definir(false)}>
           <div
             role="menu"
             onKeyDown={andar}

@@ -1,4 +1,6 @@
+import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react'
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -16,6 +18,8 @@ export type ItemNav<T extends string> = {
   // item redondo so com o rotulo curto (avatar). precisa de descricao pro leitor de tela
   compacto?: boolean
   descricao?: string
+  // botao de acao (o avatar que abre o menu da conta): fica dentro da pilula, mas o destaque nao vai ate ele
+  acao?: boolean
 }
 
 type Medida = { x: number; largura: number }
@@ -31,6 +35,9 @@ type Gesto<T> = {
 // quanto o ponteiro precisa andar pra contar como arraste e nao como clique
 const LIMITE_ARRASTE = 4
 
+// sem quique (bounce 0): com quique o destaque passa do item e vaza do fundo da pilula. 0.7s e o ritmo calmo
+const MOLA = { type: 'spring', duration: 0.7, bounce: 0 } as const
+
 type NavPilulaProps<T extends string> = {
   itens: ItemNav<T>[]
   ativo: T
@@ -43,7 +50,20 @@ type NavPilulaProps<T extends string> = {
 // decide onde ela fica (o cabecalho do layout)
 export function NavPilula<T extends string>({ itens, ativo, onMudar, className }: NavPilulaProps<T>) {
   const botoes = useRef(new Map<T, HTMLButtonElement>())
-  const destaqueRef = useRef<HTMLSpanElement>(null)
+  const navRef = useRef<HTMLElement>(null)
+  // o que o destaque pode escolher. o avatar de conta e so um botao
+  const selecionaveis = itens.filter((item) => !item.acao)
+  // posicao e largura do destaque. sao motion values: o arraste mexe neles sem render
+  const x = useMotionValue(0)
+  const largura = useMotionValue(0)
+  const animacoes = useRef<ReturnType<typeof animate>[]>([])
+  const posicionado = useRef(false)
+  // true enquanto o destaque desliza. quem remede no meio do caminho refaz o trajeto em vez de pular
+  const animando = useRef(false)
+  const rodada = useRef(0)
+  // o ativo mais recente, pra os escutadores de resize e fonte nao precisarem ser refeitos a cada troca
+  const ativoRef = useRef(ativo)
+  const reduzir = useReducedMotion()
   const gesto = useRef<Gesto<T> | null>(null)
   const removerEscutas = useRef<(() => void) | null>(null)
   // so o item sob o destaque entra no estado, pra cor do texto acompanhar o arraste
@@ -54,21 +74,35 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
     return botao ? { x: botao.offsetLeft, largura: botao.offsetWidth } : null
   }
 
-  // posiciona o destaque direto no DOM. animado=false tira a transicao, que so pode ficar fora do arraste
-  function posicionar(medida: Medida, animado: boolean) {
-    const el = destaqueRef.current
-    if (!el) return
-    el.style.transition = animado ? '' : 'none'
-    el.style.transform = `translateX(${medida.x}px)`
-    el.style.width = `${medida.largura}px`
-  }
+  // leva o destaque ate a medida. animado=true usa a mola do Motion, a mesma do seletor do login.
+  // durante o arraste e na primeira medida ele vai direto, sem animar
+  const posicionar = useCallback(
+    (medida: Medida, animado: boolean) => {
+      animacoes.current.forEach((controle) => controle.stop())
+      const id = ++rodada.current
+      if (!animado || reduzir) {
+        animacoes.current = []
+        animando.current = false
+        x.set(medida.x)
+        largura.set(medida.largura)
+        return
+      }
+      animando.current = true
+      animacoes.current = [animate(x, medida.x, MOLA), animate(largura, medida.largura, MOLA)]
+      // so a ultima rodada pode dizer que terminou; uma parada no meio nao conta
+      void Promise.all(animacoes.current).then(() => {
+        if (rodada.current === id) animando.current = false
+      })
+    },
+    [x, largura, reduzir],
+  )
 
   // o item cujo centro fica mais perto do centro do destaque
   function maisProximo(x: number, largura: number): T | null {
     const centro = x + largura / 2
     let escolhido: T | null = null
     let menor = Infinity
-    for (const item of itens) {
+    for (const item of selecionaveis) {
       const medida = medir(item.id)
       if (!medida) continue
       const distancia = Math.abs(medida.x + medida.largura / 2 - centro)
@@ -82,22 +116,27 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
 
   // o destaque acompanha o item ativo. quando o ativo muda, ele desliza ate la
   useLayoutEffect(() => {
+    ativoRef.current = ativo
     if (gesto.current) return
     const medida = medir(ativo)
-    if (medida) posicionar(medida, true)
-  }, [ativo, itens])
+    if (medida) posicionar(medida, posicionado.current)
+    posicionado.current = true
+  }, [ativo, posicionar])
 
-  // janela redimensionada ou fonte carregada depois: mede de novo sem animar
+  // janela redimensionada, fonte carregada depois ou contador aparecendo (a pilula muda de largura):
+  // mede de novo. se o destaque esta deslizando, so corrige o destino. nao pode depender de `ativo`:
+  // senao a cada troca o document.fonts.ready (ja resolvido) rodava na hora e fazia o destaque pular
   useEffect(() => {
     function reposicionar() {
       if (gesto.current) return
-      const medida = medir(ativo)
-      if (medida) posicionar(medida, false)
+      const medida = medir(ativoRef.current)
+      if (medida) posicionar(medida, animando.current)
     }
-    window.addEventListener('resize', reposicionar)
-    document.fonts.ready.then(reposicionar)
-    return () => window.removeEventListener('resize', reposicionar)
-  }, [ativo])
+    const observador = new ResizeObserver(reposicionar)
+    if (navRef.current) observador.observe(navRef.current)
+    void document.fonts.ready.then(reposicionar)
+    return () => observador.disconnect()
+  }, [posicionar])
 
   // se o componente sair da tela no meio de um arraste, tira as escutas da janela
   useEffect(() => () => removerEscutas.current?.(), [])
@@ -111,8 +150,8 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
 
     function aoMover(e: PointerEvent) {
       const atual = gesto.current
-      const primeiro = medir(itens[0].id)
-      const ultimo = medir(itens[itens.length - 1].id)
+      const primeiro = medir(selecionaveis[0].id)
+      const ultimo = medir(selecionaveis[selecionaveis.length - 1].id)
       if (!atual || !primeiro || !ultimo) return
       const dx = e.clientX - atual.inicioX
       const x = Math.min(Math.max(atual.origem.x + dx, primeiro.x), ultimo.x)
@@ -157,8 +196,8 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
     const passo = evento.key === 'ArrowRight' ? 1 : evento.key === 'ArrowLeft' ? -1 : 0
     if (passo === 0) return
     evento.preventDefault()
-    const indice = itens.findIndex((item) => item.id === ativo)
-    const proximo = itens[(indice + passo + itens.length) % itens.length]
+    const indice = selecionaveis.findIndex((item) => item.id === ativo)
+    const proximo = selecionaveis[(indice + passo + selecionaveis.length) % selecionaveis.length]
     onMudar(proximo.id)
     botoes.current.get(proximo.id)?.focus()
   }
@@ -167,6 +206,7 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
 
   return (
     <nav
+      ref={navRef}
       aria-label="Navegação principal"
       onPointerDown={aoPressionar}
       onKeyDown={aoTeclar}
@@ -175,13 +215,9 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
         className,
       )}
     >
-      <span
-        ref={destaqueRef}
-        aria-hidden="true"
-        className="absolute inset-y-1.5 left-0 rounded-full bg-paper transition-[transform,width] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"
-      />
+      <motion.span aria-hidden="true" style={{ x, width: largura }} className="absolute inset-y-1.5 left-0 rounded-full bg-paper" />
       {itens.map((item) => {
-        const aqui = item.id === selecionado
+        const aqui = !item.acao && item.id === selecionado
         return (
           <button
             key={item.id}
@@ -191,12 +227,18 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
             }}
             type="button"
             onClick={() => onMudar(item.id)}
-            aria-current={item.id === ativo ? 'page' : undefined}
+            aria-current={!item.acao && item.id === ativo ? 'page' : undefined}
             aria-label={item.descricao}
+            data-abre-menu={item.acao ? '' : undefined}
+            aria-haspopup={item.acao ? 'menu' : undefined}
             className={cn(
               'relative flex h-10 items-center justify-center gap-2 rounded-full text-sm transition-colors duration-300',
               item.compacto ? 'ml-1 w-10 text-[13px]' : 'px-4',
-              aqui ? 'font-medium text-ink' : 'text-paper-2 hover:text-paper',
+              item.acao
+                ? 'bg-[#2a2a28] font-medium text-paper hover:bg-[#3a3a37]'
+                : aqui
+                  ? 'font-medium text-ink'
+                  : 'text-paper-2 hover:text-paper',
             )}
           >
             {item.rotulo}

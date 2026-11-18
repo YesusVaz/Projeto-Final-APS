@@ -31,3 +31,8 @@ export function dataHora(iso: string): string {
 export function primeiroNome(nome: string): string {
   return nome.trim().split(/\s+/)[0] ?? nome
 }
+
+// dias corridos entre uma data YYYY-MM-DD e hoje. as duas viram meia-noite UTC, entao o fuso nao desloca
+export function diasDesde(iso: string): number {
+  return Math.max(0, Math.round((Date.parse(hoje()) - Date.parse(iso)) / 86_400_000))
+}

@@ -1,9 +1,9 @@
 import { motion } from 'motion/react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { numero } from '../../api/formatar'
-import { listarLotes, type Lote } from '../../api/lotes'
-import { ROTULO_ESPECIE, ROTULO_STATUS_LOTE } from '../../api/tipos'
+import { idadeDoLote, listarAlertasMortalidade, listarLotes, type Lote } from '../../api/lotes'
+import { ROTULO_ESPECIE, ROTULO_NIVEL, ROTULO_STATUS_LOTE, type NivelAlerta } from '../../api/tipos'
 import { useCarregar } from '../../hooks/useCarregar'
 import { permite } from '../../sessao/permissoes'
 import { useLogado } from '../../sessao/sessaoContexto'
@@ -11,7 +11,7 @@ import {
   Cab,
   CabecalhoPagina,
   Cel,
-  classesBotao,
+  Botao,
   Entrada,
   EsqueletoLista,
   EstadoVazio,
@@ -28,21 +28,31 @@ import {
   TabelaCorpo,
 } from '../../ui'
 import { Carregavel } from '../comum/Carregavel'
-import { porcentagemSaldo } from '../comum/lotes'
+import { NIVEL_SELO, nivelPorLote, porcentagemSaldo, TOM_PROGRESSO } from '../comum/lotes'
+import { PainelNovoLote } from './PainelNovoLote'
 
 type Filtro = 'todos' | 'ativos' | 'encerrados'
 
-function SeloStatus({ lote }: { lote: Lote }) {
-  return <Selo nivel={lote.status === 'ATIVO' ? 'normal' : 'neutro'}>{ROTULO_STATUS_LOTE[lote.status]}</Selo>
+// situacao do lote: ativo mostra o nivel da mortalidade (normal, atencao, critico). encerrado fica neutro
+function SeloStatus({ lote, nivel }: { lote: Lote; nivel: NivelAlerta }) {
+  if (lote.status !== 'ATIVO') return <Selo nivel="neutro">{ROTULO_STATUS_LOTE[lote.status]}</Selo>
+  return <Selo nivel={NIVEL_SELO[nivel]}>{ROTULO_NIVEL[nivel]}</Selo>
 }
 
 export function Lotes() {
   const { perfil } = useLogado()
   const { carga, recarregar } = useCarregar(listarLotes)
+  const alertas = useCarregar(listarAlertasMortalidade)
+  // o painel de novo lote abre por ?novo=1, assim a lista nao recarrega e o menu Registrar aponta pra ca
+  const [params, setParams] = useSearchParams()
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [busca, setBusca] = useState('')
 
   const podeCadastrar = permite(perfil, 'cadastrarLote')
+  const novoAberto = podeCadastrar && params.has('novo')
+  const niveis = nivelPorLote(alertas.carga.situacao === 'pronto' ? alertas.carga.dados : [])
+  const abrirNovo = () => setParams({ novo: '1' })
+  const fecharNovo = () => setParams({}, { replace: true })
   const todos = carga.situacao === 'pronto' ? carga.dados : []
   const ativos = todos.filter((l) => l.status === 'ATIVO').length
 
@@ -64,10 +74,9 @@ export function Lotes() {
         }
         acoes={
           podeCadastrar ? (
-            <Link to="/lotes/novo" className={classesBotao('primario')}>
-              <Icone nome="mais" tamanho={16} />
+            <Botao icone="mais" onClick={abrirNovo}>
               Novo lote
-            </Link>
+            </Botao>
           ) : undefined
         }
       />
@@ -107,9 +116,7 @@ export function Lotes() {
                   texto={podeCadastrar ? 'Cadastre o primeiro lote para começar a registrar o dia da granja.' : 'Quando um lote for cadastrado, ele aparece aqui.'}
                   acao={
                     podeCadastrar ? (
-                      <Link to="/lotes/novo" className={classesBotao('primario')}>
-                        Novo lote
-                      </Link>
+                      <Botao onClick={abrirNovo}>Novo lote</Botao>
                     ) : undefined
                   }
                 />
@@ -118,19 +125,25 @@ export function Lotes() {
               )
             ) : (
               <>
-                <TabelaLotes lotes={visiveis} />
-                <ListaLotes lotes={visiveis} />
+                <TabelaLotes lotes={visiveis} niveis={niveis} />
+                <ListaLotes lotes={visiveis} niveis={niveis} />
+                <p className="mt-5 max-w-[60ch] text-[13.5px] text-ink-3">
+                  O saldo é a soma de tudo que entrou e saiu do lote. Os movimentos não podem ser editados, só acrescentados.
+                </p>
               </>
             )}
           </>
         )}
       </Carregavel>
+      {podeCadastrar ? <PainelNovoLote aberto={novoAberto} onFechar={fecharNovo} /> : null}
     </Pagina>
   )
 }
 
 // desktop: tabela. no celular ela some e entra a lista de linhas
-function TabelaLotes({ lotes }: { lotes: Lote[] }) {
+type PropsLista = { lotes: Lote[]; niveis: Map<number, NivelAlerta> }
+
+function TabelaLotes({ lotes, niveis }: PropsLista) {
   return (
     <motion.div {...propsItem(0)} className="hidden md:block">
       <Tabela>
@@ -138,9 +151,13 @@ function TabelaLotes({ lotes }: { lotes: Lote[] }) {
           <Linha>
             <Cab>Código</Cab>
             <Cab>Espécie</Cab>
+            <Cab>Idade</Cab>
             <Cab numerica>Inicial</Cab>
-            <Cab>Saldo</Cab>
+            <Cab numerica>Saldo</Cab>
             <Cab>Situação</Cab>
+            <Cab>
+              <span className="sr-only">Abrir</span>
+            </Cab>
           </Linha>
         </TabelaCabeca>
         <TabelaCorpo>
@@ -152,17 +169,31 @@ function TabelaLotes({ lotes }: { lotes: Lote[] }) {
                 </Link>
               </Cel>
               <Cel>{ROTULO_ESPECIE[l.especie]}</Cel>
+              <Cel className="tabular-nums">{l.status === 'ATIVO' ? <IdadeDoLote id={l.id} /> : <span className="text-ink-3">—</span>}</Cel>
               <Cel numerica className="font-mono">
                 {numero(l.quantidadeInicial)}
               </Cel>
               <Cel>
-                <div className="flex items-center gap-3">
-                  <span className="w-14 font-mono font-medium">{numero(l.saldo)}</span>
-                  <Progresso valor={porcentagemSaldo(l)} indice={i} rotulo={`Saldo do lote ${l.codigo}`} className="w-24" />
+                <div className="flex items-center justify-end gap-3">
+                  <span className={l.status === 'ATIVO' ? 'font-mono font-medium' : 'font-mono font-medium text-ink-3'}>{numero(l.saldo)}</span>
+                  {l.status === 'ATIVO' ? (
+                    <Progresso
+                      valor={porcentagemSaldo(l)}
+                      tom={TOM_PROGRESSO[niveis.get(l.id) ?? 'NORMAL']}
+                      indice={i}
+                      rotulo={`Saldo do lote ${l.codigo}`}
+                      className="w-24"
+                    />
+                  ) : (
+                    <span className="text-ink-3">—</span>
+                  )}
                 </div>
               </Cel>
               <Cel>
-                <SeloStatus lote={l} />
+                <SeloStatus lote={l} nivel={niveis.get(l.id) ?? 'NORMAL'} />
+              </Cel>
+              <Cel className="w-6 text-ink-4">
+                <Icone nome="direita" tamanho={18} />
               </Cel>
             </Linha>
           ))}
@@ -172,7 +203,14 @@ function TabelaLotes({ lotes }: { lotes: Lote[] }) {
   )
 }
 
-function ListaLotes({ lotes }: { lotes: Lote[] }) {
+// cada linha busca a idade do proprio lote. se falhar, mostra traco e o resto da tabela segue
+function IdadeDoLote({ id }: { id: number }) {
+  const { carga } = useCarregar((token) => idadeDoLote(token, id), id)
+  if (carga.situacao !== 'pronto') return <span className="text-ink-3">—</span>
+  return <>{carga.dados.idadeDias} dias</>
+}
+
+function ListaLotes({ lotes, niveis }: PropsLista) {
   return (
     <ul className="md:hidden">
       {lotes.map((l, i) => (
@@ -183,11 +221,17 @@ function ListaLotes({ lotes }: { lotes: Lote[] }) {
                 <b className="font-mono font-medium">{l.codigo}</b>
                 <span className="text-ink-3"> · {ROTULO_ESPECIE[l.especie]}</span>
               </span>
-              <SeloStatus lote={l} />
+              <SeloStatus lote={l} nivel={niveis.get(l.id) ?? 'NORMAL'} />
             </div>
             <div className="flex items-center gap-3">
               <span className="font-mono font-medium">{numero(l.saldo)}</span>
-              <Progresso valor={porcentagemSaldo(l)} indice={i} rotulo={`Saldo do lote ${l.codigo}`} className="flex-1" />
+              <Progresso
+                valor={porcentagemSaldo(l)}
+                tom={TOM_PROGRESSO[niveis.get(l.id) ?? 'NORMAL']}
+                indice={i}
+                rotulo={`Saldo do lote ${l.codigo}`}
+                className="flex-1"
+              />
               <span className="font-mono text-[13px] text-ink-3">de {numero(l.quantidadeInicial)}</span>
             </div>
           </ItemLista>

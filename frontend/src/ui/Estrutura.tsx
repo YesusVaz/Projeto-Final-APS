@@ -8,7 +8,7 @@ import { NumeroAnimado } from './NumeroAnimado'
 
 // moldura da pagina: largura maxima e respiro dos lados
 export function Pagina({ className, ...resto }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('relative mx-auto w-full max-w-[1280px] px-6 pb-20 md:px-12', className)} {...resto} />
+  return <div className={cn('relative mx-auto w-full max-w-[1440px] px-6 pb-20 md:px-12 2xl:px-16', className)} {...resto} />
 }
 
 type CabecalhoPaginaProps = {
@@ -83,17 +83,24 @@ type EstatisticaProps = {
   descricao?: string
   // posicao na fila de entrada
   indice?: number
+  // grande (52px) no inicio; medio (40px) nos detalhes
+  tamanho?: 'grande' | 'medio'
 }
 
 // numero grande de resumo, solto no fundo
-export function Estatistica({ valor, rotulo, descricao, indice = 0 }: EstatisticaProps) {
+export function Estatistica({ valor, rotulo, descricao, indice = 0, tamanho = 'grande' }: EstatisticaProps) {
   return (
     <motion.div {...propsItem(indice)}>
-      <p className="font-mono text-[40px] leading-none tracking-[-0.045em] tabular-nums md:text-[52px]">
+      <p
+        className={cn(
+          'font-mono leading-none tabular-nums',
+          tamanho === 'medio' ? 'text-[40px] tracking-[-0.04em]' : 'text-[40px] tracking-[-0.045em] md:text-[52px]',
+        )}
+      >
         {typeof valor === 'number' ? <NumeroAnimado valor={valor} /> : valor}
       </p>
-      <p className="mt-2.5 font-medium">{rotulo}</p>
-      {descricao ? <p className="text-[13.5px] text-ink-3">{descricao}</p> : null}
+      <p className={cn('font-medium', tamanho === 'medio' ? 'mt-2' : 'mt-2.5')}>{rotulo}</p>
+      {descricao ? <p className={cn('text-ink-3', tamanho === 'medio' ? 'text-[13px]' : 'text-[13.5px]')}>{descricao}</p> : null}
     </motion.div>
   )
 }

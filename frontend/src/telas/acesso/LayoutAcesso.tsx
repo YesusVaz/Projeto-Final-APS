@@ -1,75 +1,85 @@
-import { motion } from 'motion/react'
-import type { ReactNode } from 'react'
-import { Link } from 'react-router'
-import { cn, Marca, propsPagina } from '../../ui'
-
-type LayoutAcessoProps = {
-  atual: 'entrar' | 'cadastro'
-  titulo: string
-  descricao: string
-  // frase grande do painel escuro
-  chamada: string
-  apoio: string
-  children: ReactNode
-}
-
-// alturas das barrinhas decorativas do painel escuro. a azul e a "do dia"
-const BARRAS = [60, 96, 78, 132, 110, 168, 140]
+import { AnimatePresence, motion, type Variants } from 'motion/react'
+import { useState, type ReactNode } from 'react'
+import { Link, useLocation, useOutlet } from 'react-router'
+import { cn, Marca } from '../../ui'
+import { PainelLateral } from './PainelLateral'
 
 const ABAS = [
   { id: 'entrar', caminho: '/entrar', rotulo: 'Entrar' },
   { id: 'cadastro', caminho: '/cadastro', rotulo: 'Criar conta' },
 ] as const
 
-// moldura das duas telas publicas: painel escuro de um lado, formulario do outro
-export function LayoutAcesso({ atual, titulo, descricao, chamada, apoio, children }: LayoutAcessoProps) {
-  return (
-    <motion.div {...propsPagina} className="mx-auto flex min-h-dvh w-full max-w-[1280px] flex-wrap gap-4 p-4">
-      <aside className="relative hidden min-h-[640px] flex-[1_1_440px] flex-col justify-between overflow-hidden rounded-[32px] bg-ink p-10 text-paper md:flex">
-        <Marca className="[&>span]:bg-paper [&>span]:text-ink" />
-        <div aria-hidden="true" className="grid h-[180px] grid-cols-7 items-end gap-2.5">
-          {BARRAS.map((altura, i) => (
-            <motion.i
-              key={altura}
-              initial={{ scaleY: 0 }}
-              animate={{ scaleY: 1 }}
-              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.15 + i * 0.06 }}
-              style={{ height: altura }}
-              className={cn('block origin-bottom rounded-md', i === 5 ? 'bg-accent' : 'bg-paper/16')}
-            />
-          ))}
-        </div>
-        <div>
-          <p className="max-w-[14ch] text-[34px] leading-[1.1] font-medium tracking-[-0.035em]">{chamada}</p>
-          <p className="mt-3.5 max-w-[36ch] text-[15px] text-paper-2">{apoio}</p>
-        </div>
-      </aside>
+const DESLOCAMENTO = 36
 
-      <section className="flex flex-[1_1_420px] items-center justify-center px-2 py-10 md:px-6">
-        <div className="w-full max-w-[400px]">
-          <Marca className="mb-8 md:hidden" />
-          <nav aria-label="Acesso" className="flex justify-center">
-            <div className="inline-flex rounded-full bg-trilho p-1">
-              {ABAS.map((aba) => (
+// o formulario sai pra um lado e o outro entra do lado oposto. `custom` e o sentido (1 ou -1)
+const deslizar: Variants = {
+  entra: (sentido: number) => ({ opacity: 0, x: sentido * DESLOCAMENTO }),
+  centro: { opacity: 1, x: 0, transition: { duration: 0.32, ease: 'easeOut' } },
+  sai: (sentido: number) => ({ opacity: 0, x: sentido * -DESLOCAMENTO, transition: { duration: 0.14, ease: 'easeIn' } }),
+}
+
+// guarda o que a rota mostrava quando montou. sem isso, durante a saida o formulario
+// antigo trocaria pelo conteudo da rota nova
+function Congelada({ children }: { children: ReactNode }) {
+  const [guardado] = useState(children)
+  return guardado
+}
+
+// moldura das duas telas publicas. ela fica montada na troca Entrar <-> Criar conta:
+// so o formulario desliza, o seletor move a pilula e o card lateral muda de cor
+export function LayoutAcesso() {
+  const outlet = useOutlet()
+  const { pathname } = useLocation()
+  const indice = pathname === '/cadastro' ? 1 : 0
+
+  const [aba, setAba] = useState({ indice, sentido: 0 })
+  if (aba.indice !== indice) setAba({ indice, sentido: indice > aba.indice ? 1 : -1 })
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="mx-auto flex min-h-dvh w-full max-w-[1160px] items-center justify-center gap-14 px-5 py-8"
+    >
+      <PainelLateral cadastro={indice === 1} />
+
+      <section className="flex w-full max-w-[460px] min-w-0 flex-col md:min-h-[700px] md:flex-1">
+        <Marca className="mb-8 self-center md:hidden" />
+        <nav aria-label="Acesso" className="flex justify-center">
+          <div className="relative inline-flex rounded-full bg-trilho p-1">
+            {ABAS.map((item, i) => {
+              const ativa = i === indice
+              return (
                 <Link
-                  key={aba.id}
-                  to={aba.caminho}
-                  aria-current={atual === aba.id ? 'page' : undefined}
+                  key={item.id}
+                  to={item.caminho}
+                  aria-current={ativa ? 'page' : undefined}
                   className={cn(
-                    'flex h-11 items-center rounded-full px-5 text-sm transition-colors',
-                    atual === aba.id ? 'bg-surface font-medium text-ink shadow-sm' : 'text-ink-3 hover:text-ink',
+                    'relative z-10 flex h-12 items-center rounded-full px-6 text-[15px] transition-colors duration-200',
+                    ativa ? 'font-medium text-ink' : 'text-ink-3 hover:text-ink',
                   )}
                 >
-                  {aba.rotulo}
+                  {ativa ? (
+                    <motion.span
+                      layoutId="pilula-acesso"
+                      transition={{ type: 'spring', duration: 0.6, bounce: 0 }}
+                      className="absolute inset-0 -z-10 rounded-full bg-surface shadow-sm"
+                    />
+                  ) : null}
+                  {item.rotulo}
                 </Link>
-              ))}
-            </div>
-          </nav>
-          <h1 data-titulo-pagina tabIndex={-1} className="mt-9 text-[34px] font-medium tracking-[-0.035em] outline-none">
-            {titulo}
-          </h1>
-          <p className="mt-2 text-[15px] text-ink-3">{descricao}</p>
-          {children}
+              )
+            })}
+          </div>
+        </nav>
+
+        <div className="-mx-3 mt-8 flex flex-1 flex-col justify-center overflow-x-clip px-3 py-2">
+          <AnimatePresence mode="wait" initial={false} custom={aba.sentido}>
+            <motion.div key={pathname} custom={aba.sentido} variants={deslizar} initial="entra" animate="centro" exit="sai">
+              <Congelada>{outlet}</Congelada>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </section>
     </motion.div>

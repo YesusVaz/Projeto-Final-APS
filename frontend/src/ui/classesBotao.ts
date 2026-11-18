@@ -1,7 +1,7 @@
 import { cn } from './cn'
 
 export type VarianteBotao = 'primario' | 'acao' | 'contorno' | 'fantasma' | 'perigo'
-export type TamanhoBotao = 'sm' | 'md' | 'lg' | 'icone'
+export type TamanhoBotao = 'sm' | 'md' | 'lg' | 'xl' | 'icone'
 
 const BASE =
   'inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-transparent font-medium whitespace-nowrap select-none transition duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45'
@@ -18,6 +18,7 @@ const TAMANHOS: Record<TamanhoBotao, string> = {
   sm: 'h-8 px-3.5 text-[13px]',
   md: 'h-10 px-[18px] text-sm',
   lg: 'h-[52px] px-6 text-[15px]',
+  xl: 'h-14 px-7 text-base',
   icone: 'size-10',
 }
 

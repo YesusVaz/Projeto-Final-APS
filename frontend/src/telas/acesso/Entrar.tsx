@@ -1,12 +1,20 @@
-import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { AnimatePresence } from 'motion/react'
+import { useCallback, useRef, useState, type FormEvent } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { ErroApi } from '../../api/http'
-import { entrar as entrarNaApi } from '../../api/sessao'
+import { entrar as entrarNaApi, type Sessao } from '../../api/sessao'
 import { useSessao } from '../../sessao/sessaoContexto'
-import { Aviso, Botao, Campo, Entrada } from '../../ui'
-import { LayoutAcesso } from './LayoutAcesso'
+import { Aviso, Botao, Campo } from '../../ui'
+import { CabecalhoAcesso } from './CabecalhoAcesso'
+import { EntradaAcesso, OlhoSenha } from './CampoAcesso'
+import { TransicaoOvo, type FaseOvo } from './TransicaoOvo'
 
 type EstadoLocal = { aviso?: string; de?: string } | null
+
+// o ovo precisa aparecer por um tempo minimo, senao pisca quando a API responde rapido
+const MS_MINIMO_CARREGANDO = 700
+
+const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms))
 
 export function Entrar() {
   const { sessao, entrar } = useSessao()
@@ -16,73 +24,82 @@ export function Entrar() {
   const [login, setLogin] = useState('')
   const [senha, setSenha] = useState('')
   const [verSenha, setVerSenha] = useState(false)
-  const [enviando, setEnviando] = useState(false)
+  const [fase, setFase] = useState<FaseOvo | null>(null)
   const [erro, setErro] = useState('')
+  // a sessao so e gravada quando o ovo termina de abrir. antes disso a tela de acesso continua de pe
+  const nova = useRef<Sessao | null>(null)
+  const destino = estado?.de ?? '/'
 
-  if (sessao) return <Navigate to="/" replace />
+  const concluir = useCallback(() => {
+    if (!nova.current) return
+    entrar(nova.current)
+    navegar(destino, { replace: true })
+  }, [entrar, navegar, destino])
+
+  if (sessao && !fase) return <Navigate to="/" replace />
 
   async function enviar(e: FormEvent) {
     e.preventDefault()
-    if (enviando) return
+    if (fase) return
     if (!login.trim() || !senha) {
       setErro('Informe o usuário e a senha.')
       return
     }
-    setEnviando(true)
+    setFase('carregando')
     setErro('')
-    try {
-      const nova = await entrarNaApi(login.trim(), senha)
-      entrar(nova)
-      navegar(estado?.de ?? '/', { replace: true })
-    } catch (falha) {
-      setErro(falha instanceof ErroApi ? falha.message : 'Não foi possível entrar. Tente de novo.')
-      setEnviando(false)
+    const [resposta] = await Promise.all([entrarNaApi(login.trim(), senha).catch((falha: unknown) => falha), esperar(MS_MINIMO_CARREGANDO)])
+    if (resposta instanceof Error || !resposta) {
+      setErro(resposta instanceof ErroApi ? resposta.message : 'Não foi possível entrar. Tente de novo.')
+      setFase(null)
+      return
     }
+    nova.current = resposta as Sessao
+    setFase('abrindo')
   }
 
   return (
-    <LayoutAcesso
-      atual="entrar"
-      titulo="Entrar"
-      descricao="Use o usuário e a senha da sua conta."
-      chamada="Lotes, ração e vacinas num lugar só."
-      apoio="Registre o dia da granja em poucos toques e veja o que precisa de atenção."
-    >
-      <form onSubmit={(e) => void enviar(e)} noValidate className="mt-7 flex flex-col gap-[18px]">
+    <>
+      <CabecalhoAcesso titulo="Entrar" descricao="Use o usuário e a senha da sua conta." />
+      <form onSubmit={(e) => void enviar(e)} noValidate inert={fase !== null} className="mt-8 flex flex-col gap-5">
         {estado?.aviso ? <Aviso tom="info">{estado.aviso}</Aviso> : null}
         {erro ? <Aviso tom="critico">{erro}</Aviso> : null}
         <Campo rotulo="Usuário">
           {(c) => (
-            <Entrada {...c} value={login} onChange={(e) => setLogin(e.target.value)} placeholder="seu.usuario" autoComplete="username" />
-          )}
-        </Campo>
-        <Campo
-          rotulo="Senha"
-          acao={
-            <button
-              type="button"
-              onClick={() => setVerSenha((v) => !v)}
-              aria-pressed={verSenha}
-              className="inline-flex min-h-11 items-center rounded px-1 text-[13px] text-accent hover:underline"
-            >
-              {verSenha ? 'Ocultar' : 'Mostrar'}
-            </button>
-          }
-        >
-          {(c) => (
-            <Entrada
+            <EntradaAcesso
               {...c}
-              type={verSenha ? 'text' : 'password'}
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              autoComplete="current-password"
+              icone="usuario"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="seu.usuario"
+              autoComplete="username"
             />
           )}
         </Campo>
-        <Botao type="submit" tamanho="lg" disabled={enviando} className="mt-1.5 w-full">
-          {enviando ? 'Entrando...' : 'Entrar'}
+        <Campo rotulo="Senha">
+          {(c) => (
+            <EntradaAcesso
+              {...c}
+              icone="cadeado"
+              type={verSenha ? 'text' : 'password'}
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Sua senha"
+              autoComplete="current-password"
+              fim={<OlhoSenha visivel={verSenha} onAlternar={() => setVerSenha((v) => !v)} />}
+            />
+          )}
+        </Campo>
+        <Botao type="submit" tamanho="xl" iconeDireita="seta" className="mt-2 w-full">
+          Entrar
         </Botao>
       </form>
-    </LayoutAcesso>
+      <p inert={fase !== null} className="mt-6 text-center text-[15px] text-ink-3">
+        Ainda não tem conta?{' '}
+        <Link to="/cadastro" className="rounded font-medium text-accent hover:underline hover:underline-offset-4">
+          Criar conta
+        </Link>
+      </p>
+      <AnimatePresence>{fase ? <TransicaoOvo fase={fase} aoConcluir={concluir} /> : null}</AnimatePresence>
+    </>
   )
 }

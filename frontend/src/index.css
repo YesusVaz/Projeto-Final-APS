@@ -149,9 +149,13 @@ button:disabled {
   cursor: not-allowed;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+/* na camada base, as classes do Tailwind (outline-none nos campos e no h1 de pagina) vencem esta regra.
+   fora de camada ela ganhava de todas e desenhava um segundo anel em volta dos campos */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }
 
 /* painel lateral e dialogo usam o <dialog> nativo: foco preso, Esc e fundo ja vem prontos */

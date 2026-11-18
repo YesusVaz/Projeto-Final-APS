@@ -34,6 +34,7 @@ export function LayoutApp() {
   const navegar = useNavigate()
   const { pathname } = useLocation()
   const [atalhosAbertos, setAtalhosAbertos] = useState(false)
+  const [contaAberta, setContaAberta] = useState(false)
 
   // conta alertas pra mostrar na navbar. busca de novo a cada troca de rota, assim o numero
   // acompanha o que a pessoa acabou de registrar. se falhar, so some o contador
@@ -45,34 +46,31 @@ export function LayoutApp() {
   const registros = registrosDoPerfil(perfil)
   const admin = adminDoPerfil(perfil)
 
-  const itensDesktop: ItemNav<IdNav>[] = itens.map((i) => ({
-    id: i.id,
-    rotulo: i.rotulo,
-    contador: i.id === 'alertas' && abertos > 0 ? abertos : undefined,
-  }))
+  // no desktop o avatar fica dentro da pilula, como no desenho, e abre o menu da conta
+  const itensDesktop: ItemNav<IdNav | 'conta'>[] = [
+    ...itens.map((i) => ({
+      id: i.id,
+      rotulo: i.rotulo,
+      contador: i.id === 'alertas' && abertos > 0 ? abertos : undefined,
+    })),
+    { id: 'conta', rotulo: iniciais(nome), compacto: true, acao: true, descricao: 'Menu da conta' },
+  ]
   const itensCelular: ItemInferior<IdNav>[] = itens
     .filter((i) => ITENS_NO_CELULAR.includes(i.id))
     .map((i) => ({ id: i.id, rotulo: i.rotulo, icone: i.icone }))
   const outrosItens = itens.filter((i) => !ITENS_NO_CELULAR.includes(i.id))
 
-  function irPara(id: IdNav) {
+  function irPara(id: IdNav | 'conta') {
+    if (id === 'conta') {
+      setContaAberta((a) => !a)
+      return
+    }
     const destino = itens.find((i) => i.id === id)
     if (destino) navegar(destino.caminho)
   }
 
-  const menuConta = (
-    <Menu
-      gatilho={(props) => (
-        <button
-          type="button"
-          {...props}
-          aria-label="Menu da conta"
-          className="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-trilho"
-        >
-          <Avatar iniciais={iniciais(nome)} className="size-9" />
-        </button>
-      )}
-    >
+  const conteudoConta = (
+    <>
       <div className="px-3 py-2.5">
         <p className="font-medium">{nome}</p>
         <p className="text-[12.5px] text-ink-3">{ROTULO_PERFIL[perfil]}</p>
@@ -85,21 +83,27 @@ export function LayoutApp() {
       <MenuItem icone="sair" onSelecionar={() => void sair()}>
         Sair
       </MenuItem>
-    </Menu>
+    </>
   )
 
   return (
     <div className="min-h-dvh">
-      <header className="mx-auto flex h-[72px] w-full max-w-[1280px] items-center justify-between gap-4 px-6 md:px-12">
-        <Link to="/" className="rounded-lg" aria-label="Granja, ir para o início">
+      <header className="mx-auto grid w-full max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 pt-5 md:px-12 2xl:px-16">
+        <Link to="/" className="col-start-1 justify-self-start rounded-lg" aria-label="Granja, ir para o início">
           <Marca />
         </Link>
 
-        <div className="hidden md:block">
+        <div className="relative col-start-2 hidden md:block">
           <NavPilula itens={itensDesktop} ativo={ativo} onMudar={irPara} />
+          {/* o menu nasce na borda de baixo da pilula, alinhado a direita */}
+          <div className="absolute right-0 bottom-0">
+            <Menu aberto={contaAberta} onMudarAberto={setContaAberta} gatilho={() => null}>
+              {conteudoConta}
+            </Menu>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="col-start-3 flex items-center justify-end gap-2">
           {registros.length > 0 ? (
             <div className="hidden md:block">
               <Menu
@@ -117,7 +121,22 @@ export function LayoutApp() {
               </Menu>
             </div>
           ) : null}
-          {menuConta}
+          <div className="md:hidden">
+            <Menu
+              gatilho={(props) => (
+                <button
+                  type="button"
+                  {...props}
+                  aria-label="Menu da conta"
+                  className="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-trilho"
+                >
+                  <Avatar iniciais={iniciais(nome)} className="size-9" />
+                </button>
+              )}
+            >
+              {conteudoConta}
+            </Menu>
+          </div>
         </div>
       </header>
 

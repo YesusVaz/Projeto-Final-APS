@@ -1,18 +1,15 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { ErroApi } from '../../api/http'
 import { cadastrarPublico } from '../../api/usuarios'
 import { useSessao } from '../../sessao/sessaoContexto'
-import { Aviso, Botao, Campo, Entrada, useToast } from '../../ui'
-import { LayoutAcesso } from './LayoutAcesso'
+import { Aviso, Botao, Campo, useToast } from '../../ui'
+import { EMAIL_VALIDO, LOGIN_VALIDO, MAX_BYTES_SENHA } from '../comum/validacao'
+import { CabecalhoAcesso } from './CabecalhoAcesso'
+import { EntradaAcesso, OlhoSenha } from './CampoAcesso'
 
-// mesmas regras do backend
-const LOGIN_VALIDO = /^[A-Za-z0-9._-]{3,30}$/
-const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_CARACTERES_EMAIL = 254
 const MAX_CARACTERES_NOME = 100
-// o bcrypt so le os 72 primeiros bytes da senha. passar disso cortaria a senha sem avisar
-const MAX_BYTES_SENHA = 72
 
 type Erros = Partial<Record<'login' | 'email' | 'nome' | 'senha' | 'confirma', string>>
 
@@ -27,6 +24,7 @@ export function Cadastro() {
   const [nome, setNome] = useState('')
   const [senha, setSenha] = useState('')
   const [confirma, setConfirma] = useState('')
+  const [verSenha, setVerSenha] = useState(false)
   const [erros, setErros] = useState<Erros>({})
   const [falha, setFalha] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -68,39 +66,66 @@ export function Cadastro() {
     }
   }
 
+  const olho = <OlhoSenha visivel={verSenha} onAlternar={() => setVerSenha((v) => !v)} />
+
   return (
-    <LayoutAcesso
-      atual="cadastro"
-      titulo="Criar conta"
-      descricao="Sua conta começa como funcionário. O gestor pode mudar o perfil depois."
-      chamada="Comece pelo registro do dia."
-      apoio="Depois de criar a conta, entre e veja os lotes que você acompanha."
-    >
-      <form ref={formulario} onSubmit={(e) => void enviar(e)} noValidate className="mt-6 flex flex-col gap-4">
+    <>
+      <CabecalhoAcesso titulo="Criar conta" descricao="Sua conta começa como funcionário. O gestor pode mudar o perfil depois." />
+      <form ref={formulario} onSubmit={(e) => void enviar(e)} noValidate className="mt-8 flex flex-col gap-5">
         {falha ? <Aviso tom="critico">{falha}</Aviso> : null}
         <Campo rotulo="Nome completo" erro={erros.nome}>
-          {(c) => <Entrada {...c} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como no seu documento" autoComplete="name" />}
+          {(c) => (
+            <EntradaAcesso {...c} icone="usuario" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como no seu documento" autoComplete="name" />
+          )}
         </Campo>
         <Campo rotulo="E-mail" erro={erros.email}>
           {(c) => (
-            <Entrada {...c} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@exemplo.com" autoComplete="email" />
+            <EntradaAcesso {...c} icone="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@exemplo.com" autoComplete="email" />
           )}
         </Campo>
         <Campo rotulo="Usuário" dica="É o que você digita para entrar." erro={erros.login}>
-          {(c) => <Entrada {...c} value={login} onChange={(e) => setLogin(e.target.value)} placeholder="seu.usuario" autoComplete="username" />}
+          {(c) => (
+            <EntradaAcesso {...c} icone="arroba" value={login} onChange={(e) => setLogin(e.target.value)} placeholder="seu.usuario" autoComplete="username" />
+          )}
         </Campo>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <Campo rotulo="Senha" erro={erros.senha}>
-            {(c) => <Entrada {...c} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="new-password" />}
+            {(c) => (
+              <EntradaAcesso
+                {...c}
+                icone="cadeado"
+                type={verSenha ? 'text' : 'password'}
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                autoComplete="new-password"
+                fim={olho}
+              />
+            )}
           </Campo>
           <Campo rotulo="Repetir senha" erro={erros.confirma}>
-            {(c) => <Entrada {...c} type="password" value={confirma} onChange={(e) => setConfirma(e.target.value)} autoComplete="new-password" />}
+            {(c) => (
+              <EntradaAcesso
+                {...c}
+                icone="cadeado"
+                type={verSenha ? 'text' : 'password'}
+                value={confirma}
+                onChange={(e) => setConfirma(e.target.value)}
+                autoComplete="new-password"
+                fim={olho}
+              />
+            )}
           </Campo>
         </div>
-        <Botao type="submit" tamanho="lg" disabled={enviando} className="mt-1.5 w-full">
+        <Botao type="submit" tamanho="xl" disabled={enviando} className="mt-2 w-full">
           {enviando ? 'Criando...' : 'Criar conta'}
         </Botao>
       </form>
-    </LayoutAcesso>
+      <p className="mt-6 text-center text-[15px] text-ink-3">
+        Já tem conta?{' '}
+        <Link to="/entrar" className="rounded font-medium text-accent hover:underline hover:underline-offset-4">
+          Entrar
+        </Link>
+      </p>
+    </>
   )
 }
