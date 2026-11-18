@@ -1,6 +1,6 @@
 import { motion } from 'motion/react'
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { numero } from '../../api/formatar'
 import { idadeDoLote, listarAlertasMortalidade, listarLotes, type Lote } from '../../api/lotes'
 import { ROTULO_ESPECIE, ROTULO_NIVEL, ROTULO_STATUS_LOTE, type NivelAlerta } from '../../api/tipos'
@@ -19,6 +19,8 @@ import {
   Icone,
   ItemLista,
   Linha,
+  Menu,
+  MenuItem,
   Pagina,
   Progresso,
   propsItem,
@@ -30,6 +32,7 @@ import {
 import { Carregavel } from '../comum/Carregavel'
 import { NIVEL_SELO, nivelPorLote, porcentagemSaldo, TOM_PROGRESSO } from '../comum/lotes'
 import { PainelNovoLote } from './PainelNovoLote'
+import { PaineisRegistro } from './PaineisRegistro'
 
 type Filtro = 'todos' | 'ativos' | 'encerrados'
 
@@ -49,6 +52,11 @@ export function Lotes() {
   const [busca, setBusca] = useState('')
 
   const podeCadastrar = permite(perfil, 'cadastrarLote')
+  const podeMortalidade = permite(perfil, 'registrarMortalidade')
+  const podeAlimentar = permite(perfil, 'registrarAlimentacao')
+  const podeHigienizar = permite(perfil, 'registrarHigienizacao')
+  const podeIluminar = permite(perfil, 'registrarIluminacao')
+  const temRegistro = podeMortalidade || podeAlimentar || podeHigienizar || podeIluminar
   const novoAberto = podeCadastrar && params.has('novo')
   const niveis = nivelPorLote(alertas.carga.situacao === 'pronto' ? alertas.carga.dados : [])
   const abrirNovo = () => setParams({ novo: '1' })
@@ -73,11 +81,43 @@ export function Lotes() {
             : undefined
         }
         acoes={
-          podeCadastrar ? (
-            <Botao icone="mais" onClick={abrirNovo}>
-              Novo lote
-            </Botao>
-          ) : undefined
+          <>
+            {temRegistro ? (
+              <Menu
+                gatilho={(g) => (
+                  <Botao variante="contorno" iconeDireita="baixo" {...g}>
+                    Registrar
+                  </Botao>
+                )}
+              >
+                {podeMortalidade ? (
+                  <MenuItem icone="baixa" descricao="Aves perdidas no lote" onSelecionar={() => setParams({ mortalidade: '1' })}>
+                    Mortalidade
+                  </MenuItem>
+                ) : null}
+                {podeAlimentar ? (
+                  <MenuItem icone="racao" descricao="Ração servida ao lote" onSelecionar={() => setParams({ alimentacao: '1' })}>
+                    Alimentação
+                  </MenuItem>
+                ) : null}
+                {podeHigienizar ? (
+                  <MenuItem icone="sanidade" descricao="Limpeza e desinfecção do galpão" onSelecionar={() => setParams({ higienizacao: '1' })}>
+                    Higienização
+                  </MenuItem>
+                ) : null}
+                {podeIluminar ? (
+                  <MenuItem icone="ajustes" descricao="Horas de luz por dia" onSelecionar={() => setParams({ iluminacao: '1' })}>
+                    Iluminação
+                  </MenuItem>
+                ) : null}
+              </Menu>
+            ) : null}
+            {podeCadastrar ? (
+              <Botao icone="mais" onClick={abrirNovo}>
+                Novo lote
+              </Botao>
+            ) : null}
+          </>
         }
       />
 
@@ -136,6 +176,7 @@ export function Lotes() {
         )}
       </Carregavel>
       {podeCadastrar ? <PainelNovoLote aberto={novoAberto} onFechar={fecharNovo} /> : null}
+      <PaineisRegistro lotes={todos} onConcluir={() => { recarregar(); alertas.recarregar() }} />
     </Pagina>
   )
 }
@@ -144,6 +185,7 @@ export function Lotes() {
 type PropsLista = { lotes: Lote[]; niveis: Map<number, NivelAlerta> }
 
 function TabelaLotes({ lotes, niveis }: PropsLista) {
+  const navegar = useNavigate()
   return (
     <motion.div {...propsItem(0)} className="hidden md:block">
       <Tabela>
@@ -162,9 +204,9 @@ function TabelaLotes({ lotes, niveis }: PropsLista) {
         </TabelaCabeca>
         <TabelaCorpo>
           {lotes.map((l, i) => (
-            <Linha key={l.id}>
+            <Linha key={l.id} onClick={() => navegar(`/lotes/${l.id}`)} className="cursor-pointer">
               <Cel>
-                <Link to={`/lotes/${l.id}`} className="rounded font-mono font-medium hover:underline">
+                <Link to={`/lotes/${l.id}`} onClick={(e) => e.stopPropagation()} className="rounded font-mono font-medium hover:underline">
                   {l.codigo}
                 </Link>
               </Cel>

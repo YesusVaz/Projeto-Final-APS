@@ -50,6 +50,20 @@ export async function listarUsuarios(token: string): Promise<UsuarioCriado[]> {
   return lista.map((u) => ({ ...u, perfil: perfilDaApi(u.perfil) }))
 }
 
+// so o gestor consegue. o login nunca muda
+export async function editarUsuario(
+  token: string,
+  id: number,
+  dados: { nome: string; email: string; perfil: Perfil },
+): Promise<UsuarioCriado> {
+  const salvo = await chamar<UsuarioApi>(`/usuarios/${id}`, {
+    metodo: 'PUT',
+    token,
+    corpo: { ...dados, perfil: perfilParaApi(dados.perfil) },
+  })
+  return { ...salvo, perfil: perfilDaApi(salvo.perfil) }
+}
+
 // muda so o campo ativo. usuario inativo nao consegue entrar
 export async function alterarStatusUsuario(token: string, id: number, ativo: boolean): Promise<UsuarioCriado> {
   const dados = await chamar<UsuarioApi>(`/usuarios/${id}/status`, { metodo: 'PUT', token, corpo: { ativo } })

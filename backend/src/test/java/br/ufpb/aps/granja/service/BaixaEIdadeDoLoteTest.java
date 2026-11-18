@@ -56,6 +56,31 @@ class BaixaEIdadeDoLoteTest {
     }
 
     @Test
+    void entradaAdicionalSomaNoSaldoMantemOHistoricoConsistenteEOLoteAtivo() {
+        Lote depois = lotes.registrarEntrada(c.tecnico, lote.id(), 40, "nova remessa", codigo("E-1"), AGORA);
+
+        assertEquals(140, depois.saldo().valor());
+        assertEquals(100, depois.quantidadeInicial().valor());
+        LoteService.ConsultaLote consulta = lotes.consultar(c.gestor, lote.id());
+        assertTrue(consulta.consistente());
+        assertEquals(TipoMovimentoLote.ENTRADA_ADICIONAL, consulta.historico().get(1).tipo());
+    }
+
+    @Test
+    void entradaAdicionalRespeitaLoteEncerradoQuantidadeCodigoEPerfil() {
+        assertThrows(IllegalArgumentException.class,
+                () -> lotes.registrarEntrada(c.tecnico, lote.id(), 0, null, codigo("E-0"), AGORA));
+        assertThrows(AcessoNegadoException.class,
+                () -> lotes.registrarEntrada(c.funcionario, lote.id(), 5, null, codigo("E-2"), AGORA));
+        lotes.registrarEntrada(c.tecnico, lote.id(), 5, null, codigo("E-3"), AGORA);
+        assertThrows(LancamentoDuplicadoException.class,
+                () -> lotes.registrarEntrada(c.tecnico, lote.id(), 5, null, codigo("E-3"), AGORA));
+        lotes.encerrar(c.tecnico, lote.id(), MotivoEncerramento.VENDA, codigo("F-1"), AGORA);
+        assertThrows(LoteEncerradoException.class,
+                () -> lotes.registrarEntrada(c.tecnico, lote.id(), 5, null, codigo("E-4"), AGORA));
+    }
+
+    @Test
     void baixaMaiorQueOSaldoNaoGravaNada() {
         assertThrows(SaldoInsuficienteException.class, () -> lotes.registrarBaixa(c.tecnico, lote.id(),
                 MotivoEncerramento.DESCARTE, 101, null, codigo("B-1"), AGORA));

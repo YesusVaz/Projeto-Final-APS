@@ -18,7 +18,8 @@ export type ItemNav<T extends string> = {
   // item redondo so com o rotulo curto (avatar). precisa de descricao pro leitor de tela
   compacto?: boolean
   descricao?: string
-  // botao de acao (o avatar que abre o menu da conta): fica dentro da pilula, mas o destaque nao vai ate ele
+  // botao de acao (o avatar que abre o menu da conta): fica dentro da pilula e nao entra no arraste nem nas
+  // setas, mas o destaque pode circula-lo quando a tela aberta e a dele (ex.: configuracoes)
   acao?: boolean
 }
 
@@ -144,7 +145,8 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
   function aoPressionar(evento: PointerReact<HTMLElement>) {
     if (evento.button !== 0) return
     const origem = medir(ativo)
-    if (!origem) return
+    // quando o destaque esta no avatar nao ha o que arrastar
+    if (!origem || itens.find((i) => i.id === ativo)?.acao) return
     gesto.current = { inicioX: evento.clientX, origem, movido: false, previa: ativo }
     setPrevia(ativo)
 
@@ -197,7 +199,8 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
     if (passo === 0) return
     evento.preventDefault()
     const indice = selecionaveis.findIndex((item) => item.id === ativo)
-    const proximo = selecionaveis[(indice + passo + selecionaveis.length) % selecionaveis.length]
+    const base = indice < 0 ? (passo > 0 ? -1 : 0) : indice
+    const proximo = selecionaveis[(base + passo + selecionaveis.length) % selecionaveis.length]
     onMudar(proximo.id)
     botoes.current.get(proximo.id)?.focus()
   }
@@ -217,7 +220,7 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
     >
       <motion.span aria-hidden="true" style={{ x, width: largura }} className="absolute inset-y-1.5 left-0 rounded-full bg-paper" />
       {itens.map((item) => {
-        const aqui = !item.acao && item.id === selecionado
+        const aqui = item.id === selecionado
         return (
           <button
             key={item.id}
@@ -227,17 +230,17 @@ export function NavPilula<T extends string>({ itens, ativo, onMudar, className }
             }}
             type="button"
             onClick={() => onMudar(item.id)}
-            aria-current={!item.acao && item.id === ativo ? 'page' : undefined}
+            aria-current={item.id === ativo ? 'page' : undefined}
             aria-label={item.descricao}
             data-abre-menu={item.acao ? '' : undefined}
             aria-haspopup={item.acao ? 'menu' : undefined}
             className={cn(
               'relative flex h-10 items-center justify-center gap-2 rounded-full text-sm transition-colors duration-300',
               item.compacto ? 'ml-1 w-10 text-[13px]' : 'px-4',
-              item.acao
-                ? 'bg-[#2a2a28] font-medium text-paper hover:bg-[#3a3a37]'
-                : aqui
-                  ? 'font-medium text-ink'
+              aqui
+                ? 'font-medium text-ink'
+                : item.acao
+                  ? 'bg-[#2a2a28] font-medium text-paper hover:bg-[#3a3a37]'
                   : 'text-paper-2 hover:text-paper',
             )}
           >

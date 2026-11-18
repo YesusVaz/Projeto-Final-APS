@@ -36,3 +36,28 @@ export function primeiroNome(nome: string): string {
 export function diasDesde(iso: string): number {
   return Math.max(0, Math.round((Date.parse(hoje()) - Date.parse(iso)) / 86_400_000))
 }
+
+// dinheiro chega e sai da API em centavos inteiros. so a tela mostra em reais
+export function reais(centavos: number): string {
+  return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+// "1.250,50", "1250.5" ou "12" viram centavos. texto que nao e dinheiro, ou zero, vira null
+export function paraCentavos(texto: string): number | null {
+  const limpo = texto.trim().replace(/^R\$\s*/, '')
+  if (!limpo) return null
+  const normal = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : limpo
+  if (!/^\d+(\.\d{1,2})?$/.test(normal)) return null
+  const centavos = Math.round(Number(normal) * 100)
+  return centavos > 0 ? centavos : null
+}
+
+export function primeiroDiaDoMes(): string {
+  return `${hoje().slice(0, 8)}01`
+}
+
+// tamanho de arquivo em unidade que a pessoa le: 1,4 MB, 320 KB
+export function tamanhoDeArquivo(bytes: number): string {
+  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+  return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString('pt-BR')} KB`
+}

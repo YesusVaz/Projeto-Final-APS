@@ -1,7 +1,9 @@
 package br.ufpb.aps.granja.persistencia;
 
+import br.ufpb.aps.granja.repository.CopiadorDoBanco;
 import br.ufpb.aps.granja.repository.UnidadeDeTrabalho;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -12,7 +14,7 @@ import java.util.function.Supplier;
  * Conexao SQLite (ADR-001). {@link #memoria()} deixa o banco so na memoria, sem arquivo.
  * So tem uma conexao. A transacao de {@link #executar} vale pra todos os repositorios.
  */
-public final class Banco implements UnidadeDeTrabalho, AutoCloseable {
+public final class Banco implements UnidadeDeTrabalho, CopiadorDoBanco, AutoCloseable {
 
     private static final String[] ESQUEMA = {
             "CREATE TABLE IF NOT EXISTS lancamento (codigo TEXT PRIMARY KEY, data_hora TEXT NOT NULL)",
@@ -67,6 +69,24 @@ public final class Banco implements UnidadeDeTrabalho, AutoCloseable {
                     + "lote_id INTEGER NOT NULL REFERENCES lote(id), tipo TEXT NOT NULL, data TEXT NOT NULL, "
                     + "valor INTEGER NOT NULL CHECK (valor >= 0), vivos INTEGER, indicador REAL, "
                     + "codigo TEXT NOT NULL REFERENCES lancamento(codigo), UNIQUE (lote_id, tipo, data))",
+            "CREATE TABLE IF NOT EXISTS lancamento_financeiro (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "tipo TEXT NOT NULL, categoria TEXT NOT NULL, descricao TEXT NOT NULL, "
+                    + "valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0), data TEXT NOT NULL, "
+                    + "lote_id INTEGER REFERENCES lote(id), fornecedor_id INTEGER REFERENCES fornecedor(id), "
+                    + "insumo_id INTEGER REFERENCES insumo(id), quantidade INTEGER, "
+                    + "codigo TEXT NOT NULL REFERENCES lancamento(codigo))",
+            "CREATE TABLE IF NOT EXISTS higienizacao (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "lote_id INTEGER NOT NULL REFERENCES lote(id), tipo TEXT NOT NULL, data TEXT NOT NULL, "
+                    + "observacao TEXT, codigo TEXT NOT NULL REFERENCES lancamento(codigo))",
+            "CREATE TABLE IF NOT EXISTS programa_iluminacao (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "lote_id INTEGER NOT NULL REFERENCES lote(id), "
+                    + "horas_de_luz INTEGER NOT NULL CHECK (horas_de_luz BETWEEN 1 AND 24), "
+                    + "intensidade_lux INTEGER CHECK (intensidade_lux > 0), data_inicio TEXT NOT NULL, "
+                    + "observacao TEXT, codigo TEXT NOT NULL REFERENCES lancamento(codigo))",
+            "CREATE TABLE IF NOT EXISTS chamado (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + "solicitante_id INTEGER NOT NULL REFERENCES usuario(id), categoria TEXT NOT NULL, "
+                    + "assunto TEXT NOT NULL, descricao TEXT NOT NULL, status TEXT NOT NULL, aberto_em TEXT NOT NULL, "
+                    + "resposta TEXT, atualizado_em TEXT NOT NULL, codigo TEXT NOT NULL REFERENCES lancamento(codigo))",
             "CREATE TABLE IF NOT EXISTS parametros_sistema (id INTEGER PRIMARY KEY CHECK (id = 1), "
                     + "dias_aviso_vacina INTEGER NOT NULL, dias_ocorrencia_aberta INTEGER NOT NULL)"
     };
@@ -119,6 +139,17 @@ public final class Banco implements UnidadeDeTrabalho, AutoCloseable {
             }
         } catch (SQLException e) {
             throw new ErroDePersistencia("concluir a transação", e);
+        }
+    }
+
+    /** UC28: copia o banco inteiro, de forma consistente, pra um arquivo novo. Funciona com banco em memoria tambem. */
+    @Override
+    public void copiarPara(Path destino) {
+        String caminho = destino.toAbsolutePath().toString().replace("'", "''");
+        try (Statement st = conexao.createStatement()) {
+            st.execute("VACUUM INTO '" + caminho + "'");
+        } catch (SQLException e) {
+            throw new ErroDePersistencia("copiar o banco", e);
         }
     }
 

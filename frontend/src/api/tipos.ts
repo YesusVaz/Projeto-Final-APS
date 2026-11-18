@@ -11,12 +11,13 @@ export type MotivoSaida = 'VENDA' | 'DESCARTE' | 'TRANSFERENCIA'
 
 export type TipoMovimentoLote =
   | 'ENTRADA_INICIAL'
+  | 'ENTRADA_ADICIONAL'
   | 'MORTALIDADE'
   | 'BAIXA_VENDA'
   | 'BAIXA_DESCARTE'
   | 'BAIXA_TRANSFERENCIA'
 
-export type CategoriaHistorico = 'MOVIMENTO' | 'ALIMENTACAO' | 'VACINACAO' | 'OCORRENCIA' | 'TRATAMENTO' | 'PRODUCAO'
+export type CategoriaHistorico = 'MOVIMENTO' | 'ALIMENTACAO' | 'VACINACAO' | 'OCORRENCIA' | 'TRATAMENTO' | 'PRODUCAO' | 'HIGIENIZACAO' | 'ILUMINACAO'
 
 export const ROTULO_ESPECIE: Record<Especie, string> = {
   FRANGO_CORTE: 'Frango de corte',
@@ -41,6 +42,8 @@ export const ROTULO_CATEGORIA_HISTORICO: Record<CategoriaHistorico, string> = {
   OCORRENCIA: 'Ocorrência',
   TRATAMENTO: 'Tratamento',
   PRODUCAO: 'Produção',
+  HIGIENIZACAO: 'Higienização',
+  ILUMINACAO: 'Iluminação',
 }
 
 export const ROTULO_NIVEL: Record<NivelAlerta, string> = {

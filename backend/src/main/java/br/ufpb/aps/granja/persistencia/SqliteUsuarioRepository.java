@@ -61,8 +61,8 @@ public final class SqliteUsuarioRepository implements UsuarioRepository {
 
     @Override
     public void atualizar(Usuario usuario) {
-        jdbc.executar("atualizar o usuário", "UPDATE usuario SET ativo = ? WHERE id = ?",
-                Jdbc.comoInteiro(usuario.ativo()), usuario.id());
+        jdbc.executar("atualizar o usuário", "UPDATE usuario SET nome = ?, email = ?, perfil = ?, ativo = ? WHERE id = ?",
+                usuario.nome(), usuario.email(), usuario.perfil().name(), Jdbc.comoInteiro(usuario.ativo()), usuario.id());
     }
 
     @Override

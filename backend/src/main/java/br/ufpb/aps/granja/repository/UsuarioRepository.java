@@ -21,7 +21,7 @@ public interface UsuarioRepository {
     /** E-mail tambem e unico, entao o cadastro confere antes de gravar. */
     Optional<Usuario> buscarPorEmail(String email);
 
-    /** Grava se o usuario ta ativo ou nao. RN02. */
+    /** Grava nome, e-mail, perfil e se o usuario ta ativo ou nao (RN02). O login nao muda. */
     void atualizar(Usuario usuario);
 
     long contar();

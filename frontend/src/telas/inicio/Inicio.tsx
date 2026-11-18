@@ -6,6 +6,7 @@ import { listarAlertasMortalidade, listarLotes, type AlertaMortalidade } from '.
 import { ROTULO_ESPECIE, ROTULO_NIVEL } from '../../api/tipos'
 import { useCarregar, type Busca, type Carga } from '../../hooks/useCarregar'
 import { registrosDoPerfil } from '../../layout/navegacao'
+import { permite } from '../../sessao/permissoes'
 import { useLogado } from '../../sessao/sessaoContexto'
 import {
   CabecalhoPagina,
@@ -22,6 +23,7 @@ import {
 } from '../../ui'
 import { Carregavel } from '../comum/Carregavel'
 import { NIVEL_SELO, nivelPorLote, porcentagemSaldo, TOM_PROGRESSO } from '../comum/lotes'
+import { NoMes } from './NoMes'
 
 // no celular os titulos de secao sao pequenos (.sec do desenho); no desktop viram h2 de 18px
 const TITULO_SECAO = 'md:text-lg md:tracking-[-0.015em] md:text-ink'
@@ -47,7 +49,7 @@ export function Inicio() {
   const ativos = lotes.carga.situacao === 'pronto' ? lotes.carga.dados.filter((l) => l.status === 'ATIVO') : []
   const abaixoDoMinimo = insumos.carga.situacao === 'pronto' ? insumos.carga.dados.filter((i) => i.abaixoDoMinimo) : []
   // no celular os dois registros mais usados viram cartoes grandes, ao alcance do polegar
-  const atalhos = registrosDoPerfil(perfil).filter((r) => r.caminho === '/mortalidade' || r.caminho === '/alimentacao')
+  const atalhos = registrosDoPerfil(perfil).filter((r) => r.caminho.includes('mortalidade') || r.caminho.includes('alimentacao'))
   const niveis = nivelPorLote(alertas.carga.situacao === 'pronto' ? alertas.carga.dados : [])
 
   const alertasAbertos = alertas.carga.situacao === 'pronto' ? alertas.carga.dados.length : 0
@@ -84,6 +86,8 @@ export function Inicio() {
         <Estatistica indice={2} valor={valorDe(alertas.carga, (a) => a.length)} rotulo="Alertas abertos" descricao="de mortalidade" />
         <Estatistica indice={3} valor={valorDe(insumos.carga, () => abaixoDoMinimo.length)} rotulo="Insumos abaixo do mínimo" />
       </section>
+
+      {permite(perfil, 'consultarGestao') ? <NoMes /> : null}
 
       <div className="grid items-start gap-12 lg:grid-cols-2">
         <motion.div {...propsItem(3)}>

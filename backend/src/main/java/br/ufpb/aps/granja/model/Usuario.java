@@ -7,10 +7,10 @@ public class Usuario {
 
     private final Long id;
     private final String login;
-    private final String email;
-    private final String nome;
+    private String email;
+    private String nome;
     private final String senhaHash;
-    private final Perfil perfil;
+    private Perfil perfil;
     private boolean ativo = true;
 
     public Usuario(Long id, String login, String email, String nome, String senhaHash, Perfil perfil) {
@@ -19,6 +19,13 @@ public class Usuario {
         this.email = Objects.requireNonNull(email, "email");
         this.nome = Objects.requireNonNull(nome, "nome");
         this.senhaHash = Objects.requireNonNull(senhaHash, "senhaHash");
+        this.perfil = Objects.requireNonNull(perfil, "perfil");
+    }
+
+    /** Troca nome, e-mail e perfil. O login nunca muda (RN01). */
+    public void atualizarDados(String nome, String email, Perfil perfil) {
+        this.nome = Objects.requireNonNull(nome, "nome");
+        this.email = Objects.requireNonNull(email, "email");
         this.perfil = Objects.requireNonNull(perfil, "perfil");
     }
 

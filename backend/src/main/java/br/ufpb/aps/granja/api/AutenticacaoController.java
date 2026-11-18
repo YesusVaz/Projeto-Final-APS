@@ -39,6 +39,7 @@ final class AutenticacaoController implements Controller {
                 Rota.post("/api/logout", this::logout),
                 Rota.post("/api/usuarios", this::cadastrarUsuario),
                 Rota.get("/api/usuarios", this::listarUsuarios),
+                Rota.put("/api/usuarios/(\\d+)", this::editarUsuario),
                 Rota.put("/api/usuarios/(\\d+)/status", this::alterarStatus));
     }
 
@@ -71,6 +72,13 @@ final class AutenticacaoController implements Controller {
 
     private Resposta listarUsuarios(Requisicao r) {
         return Resposta.ok(usuarios.listar(r.usuario()).stream().map(UsuarioDto::de).toList());
+    }
+
+    /** Nome, e-mail e perfil. Login, se vier no corpo, e ignorado (RN01). */
+    private Resposta editarUsuario(Requisicao r) {
+        JsonNode c = r.corpo();
+        return Resposta.ok(UsuarioDto.de(usuarios.editar(r.usuario(), r.id(), texto(c, "nome"), texto(c, "email"),
+                enumeracao(Perfil.class, c, "perfil"), LocalDateTime.now())));
     }
 
     /** So o campo ativo. Login, se vier no corpo, e ignorado. */

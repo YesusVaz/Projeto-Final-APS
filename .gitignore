@@ -16,3 +16,6 @@ frontend/dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Copias de seguranca feitas pelo sistema (UC28)
+backups/

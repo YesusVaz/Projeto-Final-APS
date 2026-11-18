@@ -94,6 +94,12 @@ export const registrarBaixa = (
   dados: DadosSaida & { quantidade: number; observacao?: string },
 ) => chamar<Lote>(`/lotes/${id}/baixas`, { metodo: 'POST', token, corpo: dados })
 
+export const registrarEntradaAnimais = (
+  token: string,
+  id: number,
+  dados: { codigoLancamento: string; quantidade: number; observacao?: string },
+) => chamar<Lote>(`/lotes/${id}/entradas`, { metodo: 'POST', token, corpo: dados })
+
 export const registrarMortalidade = (
   token: string,
   id: number,

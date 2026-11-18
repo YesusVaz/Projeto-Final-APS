@@ -6,6 +6,7 @@ export type Acao =
   | 'cadastrarLote'
   | 'encerrarLote'
   | 'registrarBaixa'
+  | 'registrarEntradaAnimais'
   | 'registrarMortalidade'
   | 'registrarAlimentacao'
   | 'movimentarEstoque'
@@ -19,18 +20,30 @@ export type Acao =
   | 'consultarAuditoria'
   | 'cadastrarFornecedor'
   | 'configurarLimites'
+  | 'gerenciarFinanceiro'
+  | 'registrarHigienizacao'
+  | 'registrarIluminacao'
+  | 'consultarProdutividade'
+  | 'consultarGestao'
+  | 'abrirChamado'
+  | 'gerenciarChamados'
+  | 'exportarDados'
+  | 'gerenciarBackup'
 
 const PERMITIDAS: Record<Exclude<Perfil, 'gestor'>, Acao[]> = {
   tecnico: [
     'cadastrarLote',
     'encerrarLote',
     'registrarBaixa',
+    'registrarEntradaAnimais',
     'registrarVacinacao',
     'registrarOcorrencia',
     'consultarAlertasSanitarios',
     'registrarProducao',
+    'registrarIluminacao',
+    'abrirChamado',
   ],
-  funcionario: ['registrarMortalidade', 'movimentarEstoque', 'registrarAlimentacao', 'registrarProducao'],
+  funcionario: ['registrarMortalidade', 'movimentarEstoque', 'registrarAlimentacao', 'registrarProducao', 'registrarHigienizacao', 'abrirChamado'],
 }
 
 export function permite(perfil: Perfil, acao: Acao): boolean {

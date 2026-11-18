@@ -2,19 +2,53 @@ import { useState, type FormEvent } from 'react'
 import { consultarConfiguracaoAlerta, consultarParametros, salvarConfiguracaoAlerta, salvarParametros, type ConfiguracaoAlerta, type Parametros } from '../../api/admin'
 import { ROTULO_CRITERIO, type CriterioAlerta } from '../../api/tiposExtras'
 import { useCarregar } from '../../hooks/useCarregar'
-import { useLogado } from '../../sessao/sessaoContexto'
-import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, Entrada, EsqueletoLista, Fichas, Pagina, useToast } from '../../ui'
+import { permite, ROTULO_PERFIL } from '../../sessao/permissoes'
+import { useLogado, useSessao } from '../../sessao/sessaoContexto'
+import { Aviso, Botao, CabecalhoPagina, Campo, Cartao, Entrada, EsqueletoLista, Fichas, Pagina, Selo, TituloSecao, useToast } from '../../ui'
 import { Carregavel } from '../comum/Carregavel'
 import { inteiroPositivo } from '../comum/formulario'
 import { useEnvio } from '../lotes/useEnvio'
 
+function iniciais(nome: string) {
+  const partes = nome.trim().split(/\s+/)
+  return ((partes[0]?.[0] ?? '') + (partes.length > 1 ? (partes.at(-1)?.[0] ?? '') : '')).toUpperCase()
+}
+
+// configuracoes da pessoa logada. so o gestor ve tambem os parametros do sistema
 export function Configuracao() {
+  const { nome, login, perfil } = useLogado()
+  const { sair } = useSessao()
+  const veParametros = permite(perfil, 'configurarLimites')
+  return (
+    <Pagina>
+      <CabecalhoPagina titulo="Configurações" descricao="Sua conta e, para o gestor, os limites que o sistema usa nos alertas." />
+
+      <Cartao className="flex max-w-[1040px] flex-wrap items-center gap-5">
+        <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-barra-fundo text-xl font-medium text-ink-hover">{iniciais(nome)}</span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xl font-medium tracking-[-0.02em]">{nome}</p>
+          <p className="mt-0.5 truncate font-mono text-[13.5px] text-ink-3">{login}</p>
+          <div className="mt-2">
+            <Selo nivel="info">{ROTULO_PERFIL[perfil]}</Selo>
+          </div>
+        </div>
+        <Botao variante="contorno" icone="sair" onClick={() => void sair()} className="min-h-11">
+          Sair da conta
+        </Botao>
+      </Cartao>
+
+      {veParametros ? <Parametros /> : null}
+    </Pagina>
+  )
+}
+
+function Parametros() {
   const alerta = useCarregar(consultarConfiguracaoAlerta)
   const parametros = useCarregar(consultarParametros)
   return (
-    <Pagina>
-      <CabecalhoPagina titulo="Parâmetros" descricao="Limites que o sistema usa para gerar os alertas." />
-      <div className="grid max-w-[1040px] gap-6 lg:grid-cols-2">
+    <section className="mt-12">
+      <TituloSecao>Parâmetros do sistema</TituloSecao>
+      <div className="mt-4 grid max-w-[1040px] gap-6 lg:grid-cols-2">
         <Carregavel carga={alerta.carga} recarregar={alerta.recarregar} esqueleto={<EsqueletoLista linhas={3} />}>
           {(dados) => <FormAlerta inicial={dados} />}
         </Carregavel>
@@ -22,7 +56,7 @@ export function Configuracao() {
           {(dados) => <FormParametros inicial={dados} />}
         </Carregavel>
       </div>
-    </Pagina>
+    </section>
   )
 }
 

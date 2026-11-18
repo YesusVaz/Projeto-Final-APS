@@ -132,6 +132,29 @@ public final class LoteService {
         return atualizado;
     }
 
+    /**
+     * Acrescenta animais a um lote ativo (RN05). Mesmo cuidado dos outros lancamentos: codigo unico (RN22)
+     * e gravacao do movimento junto com o saldo (RN23). Nao muda a data de alojamento nem a idade do lote.
+     */
+    public Lote registrarEntrada(Usuario usuario, long loteId, int quantidade, String observacao,
+                                 CodigoLancamento codigo, LocalDateTime agora) {
+        Autorizacao.exigir(usuario, Acao.REGISTRAR_ENTRADA_ANIMAIS);
+        Validacao.positiva(quantidade, "quantidade da entrada");
+        Lote atualizado = uow.executar(() -> {
+            lancamentos.registrar(codigo, agora);
+            Lote lote = carregar(loteId);
+            MovimentoLote entrada = new MovimentoLote(null, loteId, TipoMovimentoLote.ENTRADA_ADICIONAL,
+                    Quantidade.de(quantidade), codigo, agora, observacao);
+            lote.aplicar(entrada);
+            lotes.registrarMovimento(entrada);
+            lotes.atualizar(lote);
+            return lote;
+        });
+        eventos.publicar(new OperacaoRealizada("ENTRADA", "Lote " + atualizado.codigo() + ": entrada de "
+                + quantidade + " animais por " + usuario.login(), agora));
+        return atualizado;
+    }
+
     /** UC05: idade dos animais no dia pedido. */
     public IdadeLote idade(Usuario usuario, long loteId, LocalDate dia) {
         Autorizacao.exigir(usuario, Acao.CONSULTAR);
@@ -182,11 +205,19 @@ public final class LoteService {
 
     private NivelAlerta avaliarAlerta(Lote lote, LocalDateTime agora) {
         List<MovimentoLote> historico = lotes.historico(lote.id());
+        // a base da porcentagem e tudo que ja entrou no lote, nao so o que veio no cadastro
         ResumoMortalidade resumo = new ResumoMortalidade(
-                lote.quantidadeInicial().valor(),
+                totalEntrado(historico),
                 somarMortes(historico, agora.toLocalDate()),
                 somarMortes(historico, null));
         return configuracaoAlerta.politicaAtual().avaliar(resumo);
+    }
+
+    private static int totalEntrado(List<MovimentoLote> historico) {
+        return historico.stream()
+                .filter(m -> m.tipo().sinal() > 0)
+                .mapToInt(m -> m.quantidade().valor())
+                .sum();
     }
 
     /** Soma as mortes de um dia. Com {@code dia} nulo, soma todas (acumulado). */

@@ -1,7 +1,9 @@
 package br.ufpb.aps.granja.service;
 
 import br.ufpb.aps.granja.Cenario;
+import br.ufpb.aps.granja.model.Perfil;
 import br.ufpb.aps.granja.model.Usuario;
+import br.ufpb.aps.granja.model.excecao.EmailJaExisteException;
 import br.ufpb.aps.granja.model.excecao.AcessoNegadoException;
 import br.ufpb.aps.granja.model.excecao.AutenticacaoException;
 import br.ufpb.aps.granja.model.excecao.NaoEncontradoException;
@@ -61,6 +63,46 @@ class UsuarioServiceTest {
     @Test
     void gestorNaoPodeSeInativar() {
         assertThrows(RegraDeNegocioException.class, () -> usuarios.alterarStatus(c.gestor, c.gestor.id(), false, AGORA));
+    }
+
+    @Test
+    void gestorEditaNomeEmailEPerfilSemMudarOLogin() {
+        Usuario editado = usuarios.editar(c.gestor, c.tecnico.id(), "  Novo Nome ", "NOVO@x.com", Perfil.FUNCIONARIO, AGORA);
+
+        assertEquals("Novo Nome", editado.nome());
+        assertEquals("novo@x.com", editado.email());
+        assertEquals(Perfil.FUNCIONARIO, editado.perfil());
+        assertEquals("tecnico", editado.login());
+        assertEquals(Perfil.FUNCIONARIO, usuarios.listar(c.gestor).stream()
+                .filter(u -> u.id().equals(c.tecnico.id())).findFirst().orElseThrow().perfil());
+    }
+
+    @Test
+    void edicaoRecusaEmailDeOutraPessoaMasAceitaOProprio() {
+        String emailDoGestor = c.gestor.email();
+        assertThrows(EmailJaExisteException.class,
+                () -> usuarios.editar(c.gestor, c.tecnico.id(), "Técnico", emailDoGestor, Perfil.TECNICO, AGORA));
+        assertEquals(c.tecnico.email(),
+                usuarios.editar(c.gestor, c.tecnico.id(), "Outro nome", c.tecnico.email(), Perfil.TECNICO, AGORA).email());
+    }
+
+    @Test
+    void edicaoValidaOsDadosEQuemPodeEditar() {
+        assertThrows(IllegalArgumentException.class,
+                () -> usuarios.editar(c.gestor, c.tecnico.id(), " ", "a@x.com", Perfil.TECNICO, AGORA));
+        assertThrows(IllegalArgumentException.class,
+                () -> usuarios.editar(c.gestor, c.tecnico.id(), "Ok", "sem-arroba", Perfil.TECNICO, AGORA));
+        assertThrows(AcessoNegadoException.class,
+                () -> usuarios.editar(c.tecnico, c.funcionario.id(), "Ok", "a@x.com", Perfil.TECNICO, AGORA));
+        assertThrows(NaoEncontradoException.class,
+                () -> usuarios.editar(c.gestor, 999L, "Ok", "a@x.com", Perfil.TECNICO, AGORA));
+    }
+
+    @Test
+    void gestorNaoTrocaOProprioPerfilMasEditaOResto() {
+        assertThrows(RegraDeNegocioException.class,
+                () -> usuarios.editar(c.gestor, c.gestor.id(), "Gestor", c.gestor.email(), Perfil.TECNICO, AGORA));
+        assertEquals("Chefe", usuarios.editar(c.gestor, c.gestor.id(), "Chefe", c.gestor.email(), Perfil.GESTOR, AGORA).nome());
     }
 
     @Test

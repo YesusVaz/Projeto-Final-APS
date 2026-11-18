@@ -44,6 +44,7 @@ final class LoteController implements Controller {
                 Rota.post("/api/lotes/(\\d+)/encerramento", this::encerrar),
                 Rota.post("/api/lotes/(\\d+)/mortalidades", this::registrarMortalidade),
                 Rota.post("/api/lotes/(\\d+)/baixas", this::registrarBaixa),
+                Rota.post("/api/lotes/(\\d+)/entradas", this::registrarEntrada),
                 Rota.get("/api/lotes/(\\d+)/idade", this::idade),
                 Rota.get("/api/lotes/(\\d+)/historico", this::historico),
                 Rota.get("/api/alertas-mortalidade", this::listarAlertas));
@@ -85,6 +86,14 @@ final class LoteController implements Controller {
         JsonNode c = r.corpo();
         Lote lote = lotes.registrarBaixa(r.usuario(), r.id(), enumeracao(MotivoEncerramento.class, c, "motivo"),
                 inteiro(c, "quantidade"), textoOpcional(c, "observacao"), codigo(c), LocalDateTime.now());
+        return Resposta.criado(LoteDto.de(lote));
+    }
+
+    /** Acrescenta animais a um lote ativo. */
+    private Resposta registrarEntrada(Requisicao r) {
+        JsonNode c = r.corpo();
+        Lote lote = lotes.registrarEntrada(r.usuario(), r.id(), inteiro(c, "quantidade"),
+                textoOpcional(c, "observacao"), codigo(c), LocalDateTime.now());
         return Resposta.criado(LoteDto.de(lote));
     }
 

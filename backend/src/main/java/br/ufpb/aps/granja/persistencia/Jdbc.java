@@ -1,5 +1,7 @@
 package br.ufpb.aps.granja.persistencia;
 
+import br.ufpb.aps.granja.model.TabelaExportada;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -69,6 +71,32 @@ final class Jdbc {
             ligar(ps, parametros);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? Optional.of(mapeador.mapear(rs)) : Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new ErroDePersistencia(operacao, e);
+        }
+    }
+
+    /** SELECT cujo resultado vira texto puro: titulos das colunas (os apelidos) e valores, nulo como vazio. */
+    TabelaExportada tabela(String operacao, String sql, Object... parametros) {
+        try (PreparedStatement ps = banco.conexao().prepareStatement(sql)) {
+            ligar(ps, parametros);
+            try (ResultSet rs = ps.executeQuery()) {
+                int colunas = rs.getMetaData().getColumnCount();
+                List<String> cabecalho = new ArrayList<>();
+                for (int i = 1; i <= colunas; i++) {
+                    cabecalho.add(rs.getMetaData().getColumnLabel(i));
+                }
+                List<List<String>> linhas = new ArrayList<>();
+                while (rs.next()) {
+                    List<String> linha = new ArrayList<>();
+                    for (int i = 1; i <= colunas; i++) {
+                        String valor = rs.getString(i);
+                        linha.add(valor == null ? "" : valor);
+                    }
+                    linhas.add(linha);
+                }
+                return new TabelaExportada(cabecalho, linhas);
             }
         } catch (SQLException e) {
             throw new ErroDePersistencia(operacao, e);

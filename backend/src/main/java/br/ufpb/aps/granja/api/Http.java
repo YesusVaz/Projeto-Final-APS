@@ -23,6 +23,15 @@ final class Http {
     }
 
     static void enviar(HttpExchange ex, int status, Object corpo) throws IOException {
+        if (corpo instanceof Resposta.Arquivo arquivo) {
+            ex.getResponseHeaders().set("Content-Type", arquivo.tipo());
+            ex.getResponseHeaders().set("Content-Disposition", "attachment; filename=\"" + arquivo.nome() + "\"");
+            ex.sendResponseHeaders(status, arquivo.bytes().length);
+            try (OutputStream saida = ex.getResponseBody()) {
+                saida.write(arquivo.bytes());
+            }
+            return;
+        }
         byte[] bytes = JSON.writeValueAsBytes(corpo);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         ex.sendResponseHeaders(status, bytes.length);

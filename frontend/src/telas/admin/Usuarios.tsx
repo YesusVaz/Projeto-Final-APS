@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { useState, type FormEvent } from 'react'
 import type { Perfil } from '../../api/http'
-import { alterarStatusUsuario, cadastrarUsuario, listarUsuarios, type UsuarioCriado } from '../../api/usuarios'
+import { alterarStatusUsuario, cadastrarUsuario, editarUsuario, listarUsuarios, type UsuarioCriado } from '../../api/usuarios'
 import { useCarregar } from '../../hooks/useCarregar'
 import { ROTULO_PERFIL } from '../../sessao/permissoes'
 import { useLogado } from '../../sessao/sessaoContexto'
@@ -22,6 +22,13 @@ export function Usuarios() {
   const [novoAberto, setNovoAberto] = useState(false)
   const [alvo, setAlvo] = useState<UsuarioCriado | null>(null)
   const [confirmando, setConfirmando] = useState(false)
+  const [editando, setEditando] = useState<UsuarioCriado | null>(null)
+  const [edNome, setEdNome] = useState('')
+  const [edEmail, setEdEmail] = useState('')
+  const [edPerfil, setEdPerfil] = useState<Perfil>('funcionario')
+  const [edAtivo, setEdAtivo] = useState(true)
+  const [errosEd, setErrosEd] = useState<Pick<Erros, 'nome' | 'email'>>({})
+  const edicao = useEnvio()
 
   const [login, setLogin] = useState('')
   const [email, setEmail] = useState('')
@@ -74,6 +81,35 @@ export function Usuarios() {
     }
   }
 
+  function abrirEdicao(u: UsuarioCriado) {
+    setEditando(u)
+    setEdNome(u.nome)
+    setEdEmail(u.email)
+    setEdPerfil(u.perfil)
+    setEdAtivo(u.ativo)
+    setErrosEd({})
+  }
+
+  async function salvarEdicao(e: FormEvent) {
+    e.preventDefault()
+    if (!editando) return
+    const novos: typeof errosEd = {}
+    if (!edNome.trim()) novos.nome = 'Informe o nome.'
+    if (!EMAIL_VALIDO.test(edEmail.trim())) novos.email = 'Informe um e-mail válido.'
+    setErrosEd(novos)
+    if (Object.keys(novos).length > 0) return
+    const dadosMudaram = edNome.trim() !== editando.nome || edEmail.trim() !== editando.email || edPerfil !== editando.perfil
+    const ok = await edicao.enviar(async () => {
+      if (dadosMudaram) await editarUsuario(token, editando.id, { nome: edNome.trim(), email: edEmail.trim(), perfil: edPerfil })
+      if (edAtivo !== editando.ativo) await alterarStatusUsuario(token, editando.id, edAtivo)
+      avisar({ texto: `${edNome.trim()} atualizado.` })
+    })
+    if (ok) {
+      setEditando(null)
+      recarregar()
+    }
+  }
+
   return (
     <Pagina>
       <CabecalhoPagina
@@ -105,10 +141,15 @@ export function Usuarios() {
                   <span>
                     <Selo nivel="info">{ROTULO_PERFIL[u.perfil]}</Selo>
                   </span>
-                  <label className="flex items-center gap-3 text-[14px] text-ink-2 md:justify-end">
-                    <Interruptor marcado={u.ativo} onMudar={() => pedirTroca(u)} rotulo={`${u.ativo ? 'Inativar' : 'Ativar'} ${u.nome}`} desativado={u.login === meuLogin} />
-                    {u.ativo ? 'Ativo' : 'Inativo'}
-                  </label>
+                  <div className="flex items-center gap-4 md:justify-end">
+                    <label className="flex items-center gap-3 text-[14px] text-ink-2">
+                      <Interruptor marcado={u.ativo} onMudar={() => pedirTroca(u)} rotulo={`${u.ativo ? 'Inativar' : 'Ativar'} ${u.nome}`} desativado={u.login === meuLogin} />
+                      {u.ativo ? 'Ativo' : 'Inativo'}
+                    </label>
+                    <Botao variante="contorno" onClick={() => abrirEdicao(u)} aria-label={`Editar ${u.nome}`} className="min-h-10">
+                      Editar
+                    </Botao>
+                  </div>
                 </motion.li>
               ))}
             </ul>
@@ -162,6 +203,50 @@ export function Usuarios() {
             <Interruptor marcado={ativo} onMudar={setAtivo} rotulo="Usuário ativo" />
           </label>
         </form>
+      </Painel>
+
+      <Painel
+        aberto={editando !== null}
+        onFechar={() => setEditando(null)}
+        titulo="Editar usuário"
+        descricao={editando ? `O login ${editando.login} não muda.` : undefined}
+        rodape={
+          <>
+            <Botao variante="fantasma" onClick={() => setEditando(null)} className="min-h-11">
+              Cancelar
+            </Botao>
+            <Botao type="submit" form="form-edicao" disabled={edicao.enviando} className="min-h-11">
+              {edicao.enviando ? 'Salvando...' : 'Salvar'}
+            </Botao>
+          </>
+        }
+      >
+        {editando ? (
+          <form id="form-edicao" onSubmit={(e) => void salvarEdicao(e)} noValidate autoComplete="off" className="flex flex-col gap-4">
+            {edicao.erro ? <Aviso tom="critico">{edicao.erro}</Aviso> : null}
+            <Campo rotulo="Nome" erro={errosEd.nome}>
+              {(c) => <Entrada {...c} value={edNome} onChange={(e) => setEdNome(e.target.value)} maxLength={100} />}
+            </Campo>
+            <Campo rotulo="E-mail" erro={errosEd.email}>
+              {(c) => <Entrada {...c} type="email" autoComplete="off" value={edEmail} onChange={(e) => setEdEmail(e.target.value)} maxLength={254} />}
+            </Campo>
+            <Campo rotulo="Perfil" dica={editando.login === meuLogin ? 'Você não pode trocar o seu próprio perfil.' : undefined}>
+              {(c) => (
+                <Selecao {...c} value={edPerfil} onChange={(e) => setEdPerfil(e.target.value as Perfil)} disabled={editando.login === meuLogin}>
+                  {PERFIS.map((p) => (
+                    <option key={p} value={p}>
+                      {ROTULO_PERFIL[p]}
+                    </option>
+                  ))}
+                </Selecao>
+              )}
+            </Campo>
+            <label className="flex items-center justify-between gap-3 text-[14px]">
+              Usuário ativo
+              <Interruptor marcado={edAtivo} onMudar={setEdAtivo} rotulo="Usuário ativo" desativado={editando.login === meuLogin} />
+            </label>
+          </form>
+        ) : null}
       </Painel>
 
       <Dialogo

@@ -29,7 +29,26 @@ public final class IndicadoresProducao {
         return arredondar((pesoAtual - pesoAnterior) / (double) dias);
     }
 
-    private static double arredondar(double valor) {
+    /** RN20: conversao alimentar = racao consumida / peso ganho, os dois em kg. Quanto menor, melhor. */
+    public static double conversaoAlimentar(double racaoKg, double ganhoDePesoKg) {
+        if (ganhoDePesoKg <= 0) {
+            throw new IllegalArgumentException("O lote não ganhou peso para calcular a conversão alimentar.");
+        }
+        if (racaoKg < 0) {
+            throw new IllegalArgumentException("A ração consumida não pode ser negativa.");
+        }
+        return arredondar(racaoKg / ganhoDePesoKg);
+    }
+
+    /** Quilos de racao gastos por duzia de ovos. */
+    public static double racaoPorDuzia(double racaoKg, int ovos) {
+        if (ovos <= 0) {
+            throw new IllegalArgumentException("Não há ovos para calcular a ração por dúzia.");
+        }
+        return arredondar(racaoKg / (ovos / 12.0));
+    }
+
+    public static double arredondar(double valor) {
         return Math.round(valor * 100.0) / 100.0;
     }
 }

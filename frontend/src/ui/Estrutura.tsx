@@ -1,8 +1,7 @@
 import { motion } from 'motion/react'
-import type { HTMLAttributes, ReactNode } from 'react'
+import { useId, type HTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { cn } from './cn'
-import { Icone } from './Icone'
 import { propsItem } from './movimento'
 import { NumeroAnimado } from './NumeroAnimado'
 
@@ -105,11 +104,39 @@ export function Estatistica({ valor, rotulo, descricao, indice = 0, tamanho = 'g
   )
 }
 
+// o ovo da marca: duas metades que se separam pela trinca, como na abertura do app
+const OVO = 'M60 8C88 8 108 62 108 88a48 48 0 0 1-96 0C12 62 32 8 60 8z'
+const TRINCA = 'M8 82L14 80L30 70L44 88L60 72L76 90L90 72L106 82L112 80'
+
+function OvoAbrindo() {
+  const id = `ovo${useId().replace(/[^a-zA-Z0-9]/g, '')}`
+  return (
+    <svg viewBox="0 0 64 64" className="size-full" aria-hidden="true">
+      <defs>
+        <clipPath id={`${id}-topo`}>
+          <path d={`${TRINCA}L112 -10L8 -10Z`} />
+        </clipPath>
+        <clipPath id={`${id}-base`}>
+          <path d={`${TRINCA}L112 150L8 150Z`} />
+        </clipPath>
+      </defs>
+      <g transform="translate(14.6 14.12) scale(0.29)" fill="currentColor">
+        <g transform="translate(-3 -14) rotate(-12 60 80)" clipPath={`url(#${id}-topo)`}>
+          <path d={OVO} />
+        </g>
+        <g transform="translate(2 8)" clipPath={`url(#${id}-base)`}>
+          <path d={OVO} />
+        </g>
+      </g>
+    </svg>
+  )
+}
+
 export function Marca({ className }: { className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.02em]', className)}>
       <span className="flex size-[30px] items-center justify-center rounded-[10px] bg-ink text-paper">
-        <Icone nome="ovo" tamanho={16} />
+        <OvoAbrindo />
       </span>
       Granja
     </span>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { listarAlertasMortalidade } from '../api/lotes'
 import { useCarregar } from '../hooks/useCarregar'
-import { ROTULO_PERFIL } from '../sessao/permissoes'
+import { permite, ROTULO_PERFIL } from '../sessao/permissoes'
 import { useLogado, useSessao } from '../sessao/sessaoContexto'
 import {
   Avatar,
@@ -17,7 +17,7 @@ import {
   type ItemInferior,
   type ItemNav,
 } from '../ui'
-import { adminDoPerfil, idAtivo, itensDoPerfil, registrosDoPerfil, type IdNav } from './navegacao'
+import { idAtivo, itensDoPerfil, type IdNav } from './navegacao'
 import { RotaAnimada } from './RotaAnimada'
 
 // no celular a barra de baixo comporta 4 itens + o "+". o resto vira link dentro do "+"
@@ -43,8 +43,6 @@ export function LayoutApp() {
 
   const itens = itensDoPerfil(perfil)
   const ativo = idAtivo(pathname)
-  const registros = registrosDoPerfil(perfil)
-  const admin = adminDoPerfil(perfil)
 
   // no desktop o avatar fica dentro da pilula, como no desenho, e abre o menu da conta
   const itensDesktop: ItemNav<IdNav | 'conta'>[] = [
@@ -75,11 +73,32 @@ export function LayoutApp() {
         <p className="font-medium">{nome}</p>
         <p className="text-[12.5px] text-ink-3">{ROTULO_PERFIL[perfil]}</p>
       </div>
-      {admin.map((a) => (
-        <MenuItem key={a.caminho} icone={a.icone} onSelecionar={() => navegar(a.caminho)}>
-          {a.rotulo}
+      <MenuItem icone="ajustes" onSelecionar={() => navegar('/configuracao')}>
+        Configurações
+      </MenuItem>
+      <MenuItem icone="info" onSelecionar={() => navegar('/suporte')}>
+        Suporte
+      </MenuItem>
+      {permite(perfil, 'consultarGestao') ? (
+        <MenuItem icone="producao" onSelecionar={() => navegar('/relatorios')}>
+          Relatórios
         </MenuItem>
-      ))}
+      ) : null}
+      {permite(perfil, 'exportarDados') ? (
+        <MenuItem icone="baixar" onSelecionar={() => navegar('/dados')}>
+          Dados
+        </MenuItem>
+      ) : null}
+      {permite(perfil, 'gerenciarUsuarios') ? (
+        <MenuItem icone="usuarios" onSelecionar={() => navegar('/usuarios')}>
+          Usuários
+        </MenuItem>
+      ) : null}
+      {permite(perfil, 'consultarAuditoria') ? (
+        <MenuItem icone="arquivo" onSelecionar={() => navegar('/auditoria')}>
+          Auditoria
+        </MenuItem>
+      ) : null}
       <MenuItem icone="sair" onSelecionar={() => void sair()}>
         Sair
       </MenuItem>
@@ -93,7 +112,7 @@ export function LayoutApp() {
           <Marca />
         </Link>
 
-        <div className="relative col-start-2 hidden md:block">
+        <div className="relative col-start-2 hidden lg:block">
           <NavPilula itens={itensDesktop} ativo={ativo} onMudar={irPara} />
           {/* o menu nasce na borda de baixo da pilula, alinhado a direita */}
           <div className="absolute right-0 bottom-0">
@@ -104,8 +123,10 @@ export function LayoutApp() {
         </div>
 
         <div className="col-start-3 flex items-center justify-end gap-2">
+          {/* botao "Registrar" desligado por enquanto: alguns atalhos levavam a telas inteiras, nao a paineis.
+              os atalhos continuam em REGISTROS (navegacao.ts) e voltam quando todos abrirem direto.
           {registros.length > 0 ? (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <Menu
                 gatilho={(props) => (
                   <Botao variante="acao" icone="mais" {...props}>
@@ -120,8 +141,8 @@ export function LayoutApp() {
                 ))}
               </Menu>
             </div>
-          ) : null}
-          <div className="md:hidden">
+          ) : null} */}
+          <div className="lg:hidden">
             <Menu
               gatilho={(props) => (
                 <button
@@ -144,17 +165,17 @@ export function LayoutApp() {
         <RotaAnimada />
       </main>
 
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <NavInferior
           itens={itensCelular}
-          ativo={ITENS_NO_CELULAR.includes(ativo) ? ativo : 'inicio'}
+          ativo={ativo !== 'conta' && ITENS_NO_CELULAR.includes(ativo) ? ativo : 'inicio'}
           onMudar={irPara}
-          acao={{ rotulo: 'Registrar e mais opções', onClick: () => setAtalhosAbertos(true) }}
+          acao={{ rotulo: 'Mais telas', onClick: () => setAtalhosAbertos(true) }}
         />
         <Dialogo
           aberto={atalhosAbertos}
           onFechar={() => setAtalhosAbertos(false)}
-          titulo="O que você quer fazer?"
+          titulo="Para onde você quer ir?"
           rodape={
             <Botao variante="contorno" onClick={() => setAtalhosAbertos(false)}>
               Fechar
@@ -162,7 +183,7 @@ export function LayoutApp() {
           }
         >
           <ul className="-mx-2 flex flex-col">
-            {[...registros, ...outrosItens.map((i) => ({ rotulo: i.rotulo, caminho: i.caminho, icone: i.icone, descricao: 'Abrir a tela' }))].map((a) => (
+            {[...outrosItens.map((i) => ({ rotulo: i.rotulo, caminho: i.caminho, icone: i.icone, descricao: 'Abrir a tela' }))].map((a) => (
               <li key={a.caminho}>
                 <Link
                   to={a.caminho}

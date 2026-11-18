@@ -15,13 +15,13 @@ const TRINCA = 'M8 82L14 80L30 70L44 88L60 72L76 90L90 72L106 82L112 80'
 const RECORTE_TOPO = '-20,-20 140,-20 140,80 112,80 106,82 90,72 76,90 60,72 44,88 30,70 14,80 8,82 -20,82'
 const RECORTE_BASE = '-20,82 8,82 14,80 30,70 44,88 60,72 76,90 90,72 106,82 112,80 140,80 140,160 -20,160'
 
-// duracao da abertura: trinca (0.4s), metades se afastando e gema (ate ~1s), sumiço
+// duracao da abertura: trinca (0.4s), metades se afastando (ate ~1s), sumiço
 const MS_ABERTURA = 1250
 
 const estiloMetade = { transformBox: 'fill-box', transformOrigin: 'center' } as const
 
 // tela cheia: o ovo balanca enquanto o login responde. quando a resposta chega ele trinca, abre e
-// a gema aparece. so entao o app mostra a home
+// some. so entao o app mostra a home
 export function TransicaoOvo({ fase, aoConcluir }: TransicaoOvoProps) {
   const abrindo = fase === 'abrindo'
 
@@ -61,18 +61,6 @@ export function TransicaoOvo({ fase, aoConcluir }: TransicaoOvoProps) {
                 <polygon points={RECORTE_BASE} />
               </clipPath>
             </defs>
-
-            {/* gema: fica atras das metades e aparece quando elas se afastam */}
-            <motion.circle
-              cx={60}
-              cy={82}
-              r={15}
-              className="fill-accent"
-              style={estiloMetade}
-              initial={{ scale: 0 }}
-              animate={{ scale: abrindo ? 1 : 0 }}
-              transition={abrindo ? { delay: 0.5, type: 'spring', stiffness: 260, damping: 15 } : { duration: 0 }}
-            />
 
             <motion.g
               style={estiloMetade}

@@ -28,6 +28,12 @@ public final class SqliteFornecedorRepository implements FornecedorRepository {
     }
 
     @Override
+    public Optional<Fornecedor> buscarPorId(long id) {
+        return jdbc.buscar("ler o fornecedor", "SELECT " + COLUNAS + " FROM fornecedor WHERE id = ?",
+                SqliteFornecedorRepository::mapear, id);
+    }
+
+    @Override
     public Optional<Fornecedor> buscarPorDocumento(Documento documento) {
         return jdbc.buscar("ler o fornecedor", "SELECT " + COLUNAS + " FROM fornecedor WHERE documento = ?",
                 SqliteFornecedorRepository::mapear, documento.numero());

@@ -1,10 +1,12 @@
 package br.ufpb.aps.granja.service;
 
 import br.ufpb.aps.granja.model.Acao;
+import br.ufpb.aps.granja.model.Higienizacao;
 import br.ufpb.aps.granja.model.Insumo;
 import br.ufpb.aps.granja.model.Lote;
 import br.ufpb.aps.granja.model.MovimentoLote;
 import br.ufpb.aps.granja.model.OcorrenciaSanitaria;
+import br.ufpb.aps.granja.model.ProgramaIluminacao;
 import br.ufpb.aps.granja.model.RegistroAlimentacao;
 import br.ufpb.aps.granja.model.RegistroProducao;
 import br.ufpb.aps.granja.model.TipoMovimentoLote;
@@ -15,6 +17,7 @@ import br.ufpb.aps.granja.model.Vacinacao;
 import br.ufpb.aps.granja.repository.AlimentacaoRepository;
 import br.ufpb.aps.granja.repository.InsumoRepository;
 import br.ufpb.aps.granja.repository.LoteRepository;
+import br.ufpb.aps.granja.repository.ManejoRepository;
 import br.ufpb.aps.granja.repository.ProducaoRepository;
 import br.ufpb.aps.granja.repository.SanidadeRepository;
 
@@ -44,14 +47,16 @@ public final class HistoricoLoteService {
     private final SanidadeRepository sanidade;
     private final ProducaoRepository producao;
     private final InsumoRepository insumos;
+    private final ManejoRepository manejo;
 
     public HistoricoLoteService(LoteRepository lotes, AlimentacaoRepository alimentacoes, SanidadeRepository sanidade,
-                                ProducaoRepository producao, InsumoRepository insumos) {
+                                ProducaoRepository producao, InsumoRepository insumos, ManejoRepository manejo) {
         this.lotes = lotes;
         this.alimentacoes = alimentacoes;
         this.sanidade = sanidade;
         this.producao = producao;
         this.insumos = insumos;
+        this.manejo = manejo;
     }
 
     public HistoricoCompleto historico(Usuario usuario, long loteId) {
@@ -93,6 +98,14 @@ public final class HistoricoLoteService {
         for (RegistroProducao p : producao.listarPorLote(loteId)) {
             itens.add(new ItemHistorico(p.data(), null, "PRODUCAO", descreverProducao(p)));
         }
+        for (Higienizacao h : manejo.higienizacoesDoLote(loteId)) {
+            itens.add(new ItemHistorico(h.data(), null, "HIGIENIZACAO", nomeDaHigienizacao(h)));
+        }
+        for (ProgramaIluminacao p : manejo.programasDoLote(loteId)) {
+            itens.add(new ItemHistorico(p.dataInicio(), null, "ILUMINACAO", p.horasDeLuz() + " h de luz por dia"
+                    + (p.intensidadeLux() == null ? "" : ", " + p.intensidadeLux() + " lux")
+                    + (p.observacao() == null ? "" : " (" + p.observacao() + ")")));
+        }
 
         itens.sort(Comparator.comparing(ItemHistorico::data)
                 .thenComparingInt(HistoricoLoteService::posicaoNoDia)
@@ -114,6 +127,7 @@ public final class HistoricoLoteService {
     private static String descreverMovimento(MovimentoLote m) {
         String texto = switch (m.tipo()) {
             case ENTRADA_INICIAL -> "Entrada inicial de " + m.quantidade().valor() + " animais";
+            case ENTRADA_ADICIONAL -> "Entrada de mais " + m.quantidade().valor() + " animais";
             case MORTALIDADE -> m.quantidade().valor() + " mortes";
             default -> "Baixa por " + nomeDaBaixa(m.tipo()) + " de " + m.quantidade().valor() + " animais";
         };
@@ -127,6 +141,16 @@ public final class HistoricoLoteService {
             case BAIXA_TRANSFERENCIA -> "transferência";
             default -> tipo.name();
         };
+    }
+
+    private static String nomeDaHigienizacao(Higienizacao h) {
+        String tipo = switch (h.tipo()) {
+            case LIMPEZA_GALPAO -> "Limpeza do galpão";
+            case DESINFECCAO -> "Desinfecção";
+            case TROCA_DE_CAMA -> "Troca de cama";
+            case LIMPEZA_BEBEDOUROS_COMEDOUROS -> "Limpeza de bebedouros e comedouros";
+        };
+        return h.observacao() == null ? tipo : tipo + " (" + h.observacao() + ")";
     }
 
     private static String descreverProducao(RegistroProducao p) {

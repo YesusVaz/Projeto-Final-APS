@@ -1,6 +1,6 @@
-# Matriz de rastreabilidade — versão 1 (Parcial 01, 11/11/2026)
+# Matriz de rastreabilidade — versão 2 (atualizada em 18/11/2026)
 
-Liga cada regra e caso de uso do núcleo à classe que o implementa e ao teste que o comprova. Será atualizada na Parcial 02 (24/11) e fechada no pacote final (01/12).
+Liga cada regra e caso de uso à classe que o implementa e ao teste que o comprova. As seções 1 a 4 são da v1 (Parcial 01) e mostram o núcleo como estava: o que lá aparece como 🔶 (serviço, persistência, API, eventos) já foi implementado. A **seção 5** traz a situação atual, com todos os 30 casos de uso. Será fechada no pacote final (01/12).
 
 **Situação:** ✅ implementado e testado (domínio) · 🔶 planejado para 24/11 (serviço, persistência, API) · 🎯 Meta · 📄 Declarado.
 
@@ -114,3 +114,33 @@ Total: 25 existentes + 9 planejados = 34, contra o mínimo de 6 do enunciado.
 | **Factory Method** (criação) | `CriadorPoliticaAlerta` com `CriadorAlertaDiario` e `CriadorAlertaAcumulado` | ✅ implementado e testado (T23–T25) |
 
 Observação: o mínimo do PDF pede **duas categorias diferentes**. Strategy e Observer são de comportamento; Factory Method é de criação. Por isso o segundo padrão implementado é o Factory Method, e o Observer fica como terceiro, planejado para 24/11.
+
+---
+
+## 5. Situação atual (18/11/2026): os 30 casos de uso
+
+Serviços em `service/`, persistência em `persistencia/`, API em `api/` e eventos em `evento/`. O backend tem **229 testes** (`mvn test`), todos passando.
+
+| UC | Caso de uso | Serviço | Testes (classe) |
+|---|---|---|---|
+| UC01 | Cadastrar usuário | `UsuarioService` | `UsuarioServiceTest` (10) |
+| UC02 | Autenticar | `AutenticacaoService` | `AutenticacaoServiceTest` (21), `BloqueioDeLoginTest` (7) |
+| UC03 | Consultar auditoria | `AuditoriaService`, `AuditoriaListener` | `AuditoriaImutavelTest` (1) |
+| UC04, UC04.A, UC04.B, UC06 | Lote, encerramento, consulta e mortalidade | `LoteService` | `LoteServiceTest` (16), `LoteTest` (8), `ConsistenciaBancoTest` (2) |
+| UC05 | Idade dos animais e baixas | `LoteService` | `BaixaEIdadeDoLoteTest` (9) |
+| UC07, UC08, UC09 | Insumo, estoque e alerta de mínimo | `EstoqueService` | `EstoqueServiceTest` (8), `InsumoTest` (3) |
+| UC10, UC27 | Fornecedor e parâmetros do sistema | `FornecedorService`, `ParametrosService`, `ConfiguracaoAlertaService` | `FornecedorEParametrosTest` (5), `ConfiguracaoAlertaServiceTest` (4), `DocumentoTest` (4) |
+| UC11, UC12 | Vacinação, ocorrência e tratamento | `SanidadeService` | `SanidadeServiceTest` (8) |
+| UC24 | Alertas sanitários | `AlertaSanitarioService` | `AlertaSanitarioServiceTest` (6) |
+| UC13 | Alimentação | `AlimentacaoService` | `AlimentacaoServiceTest` (7) |
+| UC14, UC15 | Higienização e iluminação | `ManejoService` | `ManejoEProdutividadeTest` (11) |
+| UC16 | Produção (postura e pesagem) | `ProducaoService` | `ProducaoServiceTest` (7), `IndicadoresProducaoTest` (5) |
+| UC17 | Histórico completo do lote | `HistoricoLoteService` | `HistoricoLoteServiceTest` (1) |
+| UC18 | Produtividade por lote | `ProdutividadeService` | `ManejoEProdutividadeTest`, `ConversaoAlimentarTest` (3) |
+| UC19, UC20, UC21, UC22 | Compra, despesa, receita e relatório financeiro | `FinanceiroService` | `FinanceiroServiceTest` (8) |
+| UC23, UC25, UC26 | Painel, relatório gerencial e gráficos | `GestaoService` | `GestaoServiceTest` (6) |
+| UC28, UC29, UC30 | Backup, exportação e chamado de suporte | `BackupService`, `ExportacaoService`, `ChamadoService` | `SuporteDadosTest` (14) |
+
+Transversais: `ApiGranjaTest` (29) e `ApiCasosMetaTest` (8) exercitam as rotas e os códigos HTTP (inclusive o 403 por perfil, RN25); `BancoTest` (4) cobre a persistência; `PerfilTest` (4), `QuantidadeTest` (3), `PoliticasDeAlertaMortalidadeTest` (4) e `CriadorDePoliticaAlertaTest` (3) cobrem o domínio e os padrões Strategy e Factory Method. O Observer está em `BarramentoEventos`, com `AuditoriaListener` e `AlertaListener`.
+
+**Regras que fecharam depois da v1:** RN13 (compra gera entrada de estoque e despesa na mesma transação, `FinanceiroServiceTest`) e RN20 (conversão alimentar, `ConversaoAlimentarTest`).

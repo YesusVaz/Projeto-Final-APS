@@ -6,8 +6,9 @@ import { listarLotes, type Lote } from '../../api/lotes'
 import { listarProducao, registrarPesagem, registrarPostura, type RegistroProducao } from '../../api/producao'
 import { novoCodigoLancamento, ROTULO_ESPECIE } from '../../api/tipos'
 import { useCarregar } from '../../hooks/useCarregar'
+import { permite } from '../../sessao/permissoes'
 import { useLogado } from '../../sessao/sessaoContexto'
-import { Aviso, Botao, Campo, CabecalhoPagina, Cartao, Entrada, EsqueletoLista, EstadoVazio, Estatistica, Pagina, propsItem, Selecao, TituloSecao, useToast } from '../../ui'
+import { Aviso, Botao, Campo, CabecalhoPagina, Entrada, EsqueletoLista, EstadoVazio, Estatistica, Pagina, Painel, propsItem, Selecao, TituloSecao, useToast } from '../../ui'
 import { Carregavel } from '../comum/Carregavel'
 import { focarPrimeiroErro, inteiroPositivo } from '../comum/formulario'
 import { useEnvio } from '../lotes/useEnvio'
@@ -57,8 +58,11 @@ function Conteudo({ lotes }: { lotes: Lote[] }) {
 }
 
 function ProducaoDoLote({ lote }: { lote: Lote }) {
+  const { perfil } = useLogado()
   const { carga, recarregar } = useCarregar((token) => listarProducao(token, lote.id))
   const postura = lote.especie === 'POEDEIRA'
+  const [aberto, setAberto] = useState(false)
+  const podeRegistrar = permite(perfil, 'registrarProducao')
 
   return (
     <Carregavel carga={carga} recarregar={recarregar} esqueleto={<EsqueletoLista linhas={4} />}>
@@ -67,8 +71,14 @@ function ProducaoDoLote({ lote }: { lote: Lote }) {
         const ultimo = ordenados.at(-1)
         const serie = ordenados.filter((r) => r.indicador !== null)
         return (
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-            <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-8">
+            {podeRegistrar ? (
+              <div>
+                <Botao icone="mais" onClick={() => setAberto(true)}>
+                  {postura ? 'Registrar postura' : 'Registrar pesagem'}
+                </Botao>
+              </div>
+            ) : null}
               {ultimo ? (
                 <div className="grid grid-cols-2 gap-6">
                   <Estatistica
@@ -107,9 +117,7 @@ function ProducaoDoLote({ lote }: { lote: Lote }) {
                   </ul>
                 )}
               </div>
-            </div>
-
-            <FormularioProducao lote={lote} aoGravar={recarregar} />
+            <PainelProducao lote={lote} aberto={aberto} onFechar={() => setAberto(false)} aoGravar={recarregar} />
           </div>
         )
       }}
@@ -122,7 +130,7 @@ function resumo(r: RegistroProducao): string {
   return r.tipo === 'POSTURA' ? `${numero(r.valor)} ovos${indicador}` : `${numero(r.valor)} g de peso médio${indicador}`
 }
 
-function FormularioProducao({ lote, aoGravar }: { lote: Lote; aoGravar: () => void }) {
+function PainelProducao({ lote, aberto, onFechar, aoGravar }: { lote: Lote; aberto: boolean; onFechar: () => void; aoGravar: () => void }) {
   const { token } = useLogado()
   const avisar = useToast()
   const { enviando, erro, enviar } = useEnvio()
@@ -152,15 +160,29 @@ function FormularioProducao({ lote, aoGravar }: { lote: Lote; aoGravar: () => vo
     if (ok) {
       codigo.current = novoCodigoLancamento()
       setValor('')
+      onFechar()
       aoGravar()
     }
   }
 
   return (
-    <Cartao className="h-fit">
-      <h2 className="text-lg font-medium tracking-[-0.015em]">{postura ? 'Registrar postura' : 'Registrar pesagem'}</h2>
-      <p className="mt-1 mb-5 text-sm text-ink-3">Cada lote tem um registro por dia.</p>
-      <form ref={formulario} onSubmit={(e) => void submeter(e)} noValidate className="flex flex-col gap-4">
+    <Painel
+      aberto={aberto}
+      onFechar={onFechar}
+      titulo={postura ? 'Registrar postura' : 'Registrar pesagem'}
+      descricao={`Lote ${lote.codigo}. Cada lote tem um registro por dia.`}
+      rodape={
+        <>
+          <Botao variante="fantasma" onClick={onFechar} className="min-h-11">
+            Cancelar
+          </Botao>
+          <Botao type="submit" form="form-producao" disabled={enviando} className="min-h-11">
+            {enviando ? 'Registrando...' : postura ? 'Registrar postura' : 'Registrar pesagem'}
+          </Botao>
+        </>
+      }
+    >
+      <form id="form-producao" ref={formulario} onSubmit={(e) => void submeter(e)} noValidate className="flex flex-col gap-4">
         {erro ? <Aviso tom="critico">{erro}</Aviso> : null}
         <Campo rotulo={postura ? 'Ovos coletados' : 'Peso médio das aves (g)'} erro={erros.valor}>
           {(c) => <Entrada {...c} mono type="number" inputMode="numeric" min={1} step={1} value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0" />}
@@ -168,10 +190,7 @@ function FormularioProducao({ lote, aoGravar }: { lote: Lote; aoGravar: () => vo
         <Campo rotulo="Data" erro={erros.data}>
           {(c) => <Entrada {...c} type="date" max={hoje()} value={data} onChange={(e) => setData(e.target.value)} />}
         </Campo>
-        <Botao type="submit" disabled={enviando} className="min-h-11">
-          {enviando ? 'Registrando...' : postura ? 'Registrar postura' : 'Registrar pesagem'}
-        </Botao>
       </form>
-    </Cartao>
+    </Painel>
   )
 }

@@ -10,7 +10,8 @@ export const NIVEL_SELO: Record<NivelAlerta, NivelSelo> = {
 }
 
 export function porcentagemSaldo(lote: Pick<Lote, 'saldo' | 'quantidadeInicial'>): number {
-  return lote.quantidadeInicial > 0 ? (lote.saldo / lote.quantidadeInicial) * 100 : 0
+  // com entradas adicionais o saldo pode passar do inicial: a barra enche e para
+  return lote.quantidadeInicial > 0 ? Math.min(100, (lote.saldo / lote.quantidadeInicial) * 100) : 0
 }
 
 export const TOM_PROGRESSO: Record<NivelAlerta, TomProgresso> = {

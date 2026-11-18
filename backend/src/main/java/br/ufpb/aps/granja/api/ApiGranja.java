@@ -42,7 +42,13 @@ public final class ApiGranja {
                 new AuditoriaController(app.consultaAuditoria()),
                 new FornecedorController(app.fornecedores()),
                 new SanidadeController(app.sanidade(), app.alertasSanitarios()),
-                new ProducaoController(app.producao()));
+                new ProducaoController(app.producao()),
+                new FinanceiroController(app.financeiro()),
+                new ManejoController(app.manejo(), app.produtividade()),
+                new GestaoController(app.gestao()),
+                new ChamadoController(app.chamados()),
+                new ExportacaoController(app.exportacao()),
+                new BackupController(app.backups()));
         controllers.forEach(c -> rotas.addAll(c.rotas()));
     }
 

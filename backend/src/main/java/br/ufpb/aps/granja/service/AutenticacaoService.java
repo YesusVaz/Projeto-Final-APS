@@ -235,7 +235,7 @@ public final class AutenticacaoService {
     }
 
     /** E-mail guardado em minusculo, pra que Ana@x e ana@x nao virem duas contas. */
-    private static String validarEmail(String email) {
+    static String validarEmail(String email) {
         if (email == null) {
             throw new IllegalArgumentException("O e-mail é obrigatório.");
         }
@@ -246,7 +246,7 @@ public final class AutenticacaoService {
         return limpo;
     }
 
-    private static String validarNome(String nome) {
+    static String validarNome(String nome) {
         if (nome == null || nome.isBlank()) {
             throw new IllegalArgumentException("O nome é obrigatório.");
         }

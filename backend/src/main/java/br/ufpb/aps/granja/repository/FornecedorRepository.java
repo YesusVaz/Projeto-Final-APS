@@ -11,6 +11,8 @@ public interface FornecedorRepository {
 
     Fornecedor inserir(Fornecedor fornecedor);
 
+    Optional<Fornecedor> buscarPorId(long id);
+
     Optional<Fornecedor> buscarPorDocumento(Documento documento);
 
     List<Fornecedor> listar();
