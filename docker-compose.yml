@@ -1,0 +1,29 @@
+# Sobe tudo com:  docker compose up --build
+# Abre em http://localhost:3000   (login inicial: gestor / gestor123)
+# Para encher de dados de exemplo na primeira vez:  GRANJA_DEMO=1 docker compose up --build
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      GRANJA_DEMO: ${GRANJA_DEMO:-0}
+      # opcional: trocar as senhas iniciais (GRANJA_SENHA_GESTOR, GRANJA_SENHA_TECNICO, GRANJA_SENHA_FUNCIONARIO)
+      GRANJA_SENHA_GESTOR: ${GRANJA_SENHA_GESTOR:-}
+      GRANJA_SENHA_TECNICO: ${GRANJA_SENHA_TECNICO:-}
+      GRANJA_SENHA_FUNCIONARIO: ${GRANJA_SENHA_FUNCIONARIO:-}
+    volumes:
+      - granja-dados:/dados      # banco (granja.db) e backups
+    restart: unless-stopped
+    # sem "ports": so o frontend enxerga o backend, pela rede interna
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  granja-dados:

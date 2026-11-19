@@ -23,6 +23,7 @@ final class UsuariosDeDemonstracao {
     }
 
     private static String senha(String variavel, String padrao) {
-        return System.getenv().getOrDefault(variavel, padrao);
+        String valor = System.getenv(variavel);
+        return valor == null || valor.isBlank() ? padrao : valor;
     }
 }

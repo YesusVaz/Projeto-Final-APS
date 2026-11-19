@@ -54,7 +54,14 @@ public final class ApiGranja {
 
     /** Sobe o servidor. Porta 0 pega uma livre (usado nos testes). */
     public HttpServer iniciar(int porta) throws IOException {
-        HttpServer servidor = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), porta), 0);
+        return iniciar(null, porta);
+    }
+
+    /** Igual a {@link #iniciar(int)}, mas escutando em outro endereco (ex.: 0.0.0.0 dentro do Docker). Nulo = so a maquina local. */
+    public HttpServer iniciar(String endereco, int porta) throws IOException {
+        InetAddress host = endereco == null || endereco.isBlank()
+                ? InetAddress.getLoopbackAddress() : InetAddress.getByName(endereco);
+        HttpServer servidor = HttpServer.create(new InetSocketAddress(host, porta), 0);
         servidor.createContext("/api/", this::tratar);
         servidor.start();
         return servidor;

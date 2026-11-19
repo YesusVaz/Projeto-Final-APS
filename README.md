@@ -41,6 +41,19 @@ java -cp "backend/target/classes:$(cat backend/cp.txt)" br.ufpb.aps.granja.Main
 
 Para guardar os dados, passe o caminho de um arquivo como argumento (`... br.ufpb.aps.granja.Main granja.db`). Variáveis: `PORTA` (padrão 8080) e `BACKUPS` (pasta das cópias de segurança, padrão `./backups`).
 
+Para testar com dados de exemplo (5 lotes, estoque com alertas, 6 meses de financeiro, chamados e usuários extras), acrescente `--demo` (ou defina `GRANJA_DEMO=1`): `... br.ufpb.aps.granja.Main --demo`. Os dados só são criados se ainda não existir nenhum lote; usuários extras: `maria` (técnico), `joao`, `carlos` (funcionários) e `ana` (inativa), todos com senha `demo12345`.
+
+### Com Docker (banco persistente)
+
+Precisa só do Docker. Na raiz do projeto:
+
+```bash
+docker compose up --build            # sobe backend + frontend
+GRANJA_DEMO=1 docker compose up --build   # na primeira vez, já com dados de exemplo
+```
+
+Abra http://localhost:3000 (login `gestor` / `gestor123`). O banco (`granja.db`) e as cópias de segurança ficam no volume `granja-dados`, então os dados continuam depois de `docker compose down` e de subir de novo. Só `docker compose down -v` apaga o volume (e os dados). O backend não é exposto fora do Docker: o nginx do frontend repassa `/api` para ele. Fora do Docker, o mesmo efeito vem de `GRANJA_DB=caminho/granja.db` (ou do argumento com o caminho do arquivo).
+
 ```bash
 # interface, em outro terminal
 cd frontend
